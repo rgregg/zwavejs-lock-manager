@@ -1,0 +1,16 @@
+services:
+  zwavejs-lock-users:
+    image: zwavejs-lock-users:latest
+    build: .
+    environment:
+      DATA_DIR: /data
+      LOCAL_SECRET: change-me-please
+      HA_TOKEN: ${HA_TOKEN}
+      LOG_LEVEL: info
+      PORT: 8080
+    volumes:
+      - ./data:/data
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    # Expects zwave-js-server reachable at the URL in locks.yaml.
