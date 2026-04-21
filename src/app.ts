@@ -4,6 +4,8 @@ import { loadLocksConfig } from "./config/loader.js";
 import type { LocksConfig } from "./config/schema.js";
 import { Store } from "./store/store.js";
 import { LockStateCache } from "./cache/cache.js";
+import type { SlotState } from "./cache/types.js";
+import { fingerprintPin } from "./cache/fingerprint.js";
 import { EventBus } from "./events/bus.js";
 import { ZWaveJSClient } from "./zwave/client.js";
 import { Reconciler } from "./reconciler/reconciler.js";
@@ -120,18 +122,13 @@ export async function buildApp(opts: BuildAppOptions): Promise<RunningApp> {
     if (!lock) return;
     try {
       const slots = await zwave.getAllUserCodes(lock.nodeId, lock.maxCodeSlots);
-      const mapped: Record<string, import("./cache/types.js").SlotState> = {};
+      const mapped: Record<string, SlotState> = {};
       for (const s of slots) {
         mapped[String(s.slot)] = {
           status: s.status,
           updatedAt: new Date().toISOString(),
           ...(s.status === "enabled" && s.pin
-            ? {
-                pinFingerprint: (await import("./cache/fingerprint.js")).fingerprintPin(
-                  opts.localSecret,
-                  s.pin,
-                ),
-              }
+            ? { pinFingerprint: fingerprintPin(opts.localSecret, s.pin) }
             : {}),
         };
       }
