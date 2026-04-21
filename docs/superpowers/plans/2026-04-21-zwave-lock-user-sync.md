@@ -28,6 +28,7 @@
 ### Task 1: Project scaffolding
 
 **Files:**
+
 - Create: `package.json`
 - Create: `tsconfig.json`
 - Create: `vitest.config.ts`
@@ -204,6 +205,7 @@ git commit -m "chore: scaffold node+typescript project with vitest and eslint"
 ### Task 2: Atomic file-write utility
 
 **Files:**
+
 - Create: `src/util/atomic-write.ts`
 - Create: `tests/unit/atomic-write.test.ts`
 
@@ -303,6 +305,7 @@ git commit -m "feat(util): atomic file write helper"
 ### Task 3: Structured logger
 
 **Files:**
+
 - Create: `src/util/logger.ts`
 - Create: `tests/unit/logger.test.ts`
 
@@ -387,6 +390,7 @@ git commit -m "feat(util): pino logger with pin redaction"
 ### Task 4: Locks config schema + loader
 
 **Files:**
+
 - Create: `src/config/schema.ts`
 - Create: `src/config/loader.ts`
 - Create: `tests/unit/config-loader.test.ts`
@@ -607,6 +611,7 @@ git commit -m "feat(config): locks.yaml loader with zod validation and env inter
 ### Task 5: Slot allocator (pure function)
 
 **Files:**
+
 - Create: `src/store/slot-allocator.ts`
 - Create: `tests/unit/slot-allocator.test.ts`
 
@@ -678,6 +683,7 @@ git commit -m "feat(store): pure slot-allocation function"
 ### Task 6: Store (users.json CRUD)
 
 **Files:**
+
 - Create: `src/store/types.ts`
 - Create: `src/store/store.ts`
 - Create: `tests/unit/store.test.ts`
@@ -809,7 +815,10 @@ describe("Store", () => {
 
   it("throws when capacity exhausted", async () => {
     const { store } = await makeStore();
-    const tiny = new Store({ path: join((store as unknown as { path: string }).path, "x"), maxSlots: 1 });
+    const tiny = new Store({
+      path: join((store as unknown as { path: string }).path, "x"),
+      maxSlots: 1,
+    });
     await tiny.load();
     await tiny.addUser({ name: "A", pin: "1" });
     await expect(tiny.addUser({ name: "B", pin: "2" })).rejects.toThrow(/no slot/i);
@@ -944,6 +953,7 @@ git commit -m "feat(store): user crud backed by atomic json writes with change e
 ### Task 7: PIN fingerprint
 
 **Files:**
+
 - Create: `src/cache/fingerprint.ts`
 - Create: `tests/unit/fingerprint.test.ts`
 
@@ -1010,6 +1020,7 @@ git commit -m "feat(cache): hmac-sha256 pin fingerprint"
 ### Task 8: LockStateCache
 
 **Files:**
+
 - Create: `src/cache/types.ts`
 - Create: `src/cache/cache.ts`
 - Create: `tests/unit/cache.test.ts`
@@ -1191,7 +1202,10 @@ export class LockStateCache {
     await this.persist();
   }
 
-  async markReconcile(lockId: string, outcome: NonNullable<LockState["lastReconcileOutcome"]>): Promise<void> {
+  async markReconcile(
+    lockId: string,
+    outcome: NonNullable<LockState["lastReconcileOutcome"]>,
+  ): Promise<void> {
     const lock = this.ensureLock(lockId);
     lock.lastReconcileAt = new Date().toISOString();
     lock.lastReconcileOutcome = outcome;
@@ -1250,6 +1264,7 @@ git commit -m "feat(cache): lock state cache with atomic json persistence"
 ### Task 9: Typed EventBus
 
 **Files:**
+
 - Create: `src/events/types.ts`
 - Create: `src/events/bus.ts`
 - Create: `tests/unit/event-bus.test.ts`
@@ -1376,6 +1391,7 @@ git commit -m "feat(events): typed in-process event bus"
 ### Task 10: Diff (pure reconciliation function)
 
 **Files:**
+
 - Create: `src/reconciler/diff.ts`
 - Create: `tests/unit/diff.test.ts`
 
@@ -1572,6 +1588,7 @@ git commit -m "feat(reconciler): pure desired-vs-cache diff function"
 ### Task 11: Mock zwave-js-server test helper
 
 **Files:**
+
 - Create: `tests/helpers/mock-zwavejs-server.ts`
 
 This helper is used by subsequent ZWaveJS tests. No test of its own — exercised through the client tests.
@@ -1637,7 +1654,9 @@ export class MockZwaveJsServer {
         this.commands.push(cmd);
         const handler = this.resultHandlers.get(msg.command) ?? (() => ({}));
         const result = handler(cmd);
-        socket.send(JSON.stringify({ type: "result", messageId: msg.messageId, success: true, result }));
+        socket.send(
+          JSON.stringify({ type: "result", messageId: msg.messageId, success: true, result }),
+        );
       });
       socket.on("close", () => this.sockets.delete(socket));
     });
@@ -1683,6 +1702,7 @@ git commit -m "test: in-process mock zwave-js-server for integration tests"
 ### Task 12: ZWaveJSClient — connection + reconnect
 
 **Files:**
+
 - Create: `src/zwave/types.ts`
 - Create: `src/zwave/client.ts`
 - Create: `tests/integration/zwavejs-client.test.ts`
@@ -1724,7 +1744,12 @@ describe("ZWaveJSClient", () => {
     server = new MockZwaveJsServer();
     await server.start();
     bus = new EventBus();
-    client = new ZWaveJSClient({ url: server.url(), bus, reconnectBaseMs: 10, reconnectMaxMs: 100 });
+    client = new ZWaveJSClient({
+      url: server.url(),
+      bus,
+      reconnectBaseMs: 10,
+      reconnectMaxMs: 100,
+    });
   });
 
   afterEach(async () => {
@@ -1935,10 +1960,10 @@ export class ZWaveJSClient {
   async getAllUserCodes(nodeId: number, maxSlots: number): Promise<UserCodeSlot[]> {
     const out: UserCodeSlot[] = [];
     for (let slot = 1; slot <= maxSlots; slot++) {
-      const status = (await this.call<number>("node.get_value", {
+      const status = await this.call<number>("node.get_value", {
         nodeId,
         valueId: { commandClass: 99, property: "userIdStatus", propertyKey: slot },
-      }).catch(() => undefined));
+      }).catch(() => undefined);
       if (status === 1) {
         const pin = await this.call<string>("node.get_value", {
           nodeId,
@@ -1973,6 +1998,7 @@ git commit -m "feat(zwave): websocket client with reconnect and notification par
 ### Task 13: ZWaveJSClient — setUserCode / clearUserCode integration tests
 
 **Files:**
+
 - Modify: `tests/integration/zwavejs-client.test.ts` (append tests)
 
 - [ ] **Step 1: Append failing tests**
@@ -1980,45 +2006,45 @@ git commit -m "feat(zwave): websocket client with reconnect and notification par
 Append to `tests/integration/zwavejs-client.test.ts`:
 
 ```ts
-  it("setUserCode sends two node.set_value commands (userCode then userIdStatus)", async () => {
-    await client.start();
-    server.onCommand("node.set_value", () => null);
-    await client.setUserCode(7, 3, "1234");
-    const cmds = server.commands.filter((c) => c.command === "node.set_value");
-    expect(cmds).toHaveLength(2);
-    expect(cmds[0]?.args).toMatchObject({
-      nodeId: 7,
-      valueId: { commandClass: 99, property: "userCode", propertyKey: 3 },
-      value: "1234",
-    });
-    expect(cmds[1]?.args).toMatchObject({
-      nodeId: 7,
-      valueId: { commandClass: 99, property: "userIdStatus", propertyKey: 3 },
-      value: 1,
-    });
+it("setUserCode sends two node.set_value commands (userCode then userIdStatus)", async () => {
+  await client.start();
+  server.onCommand("node.set_value", () => null);
+  await client.setUserCode(7, 3, "1234");
+  const cmds = server.commands.filter((c) => c.command === "node.set_value");
+  expect(cmds).toHaveLength(2);
+  expect(cmds[0]?.args).toMatchObject({
+    nodeId: 7,
+    valueId: { commandClass: 99, property: "userCode", propertyKey: 3 },
+    value: "1234",
   });
+  expect(cmds[1]?.args).toMatchObject({
+    nodeId: 7,
+    valueId: { commandClass: 99, property: "userIdStatus", propertyKey: 3 },
+    value: 1,
+  });
+});
 
-  it("clearUserCode sets userIdStatus to 0", async () => {
-    await client.start();
-    server.onCommand("node.set_value", () => null);
-    await client.clearUserCode(7, 3);
-    const cmds = server.commands.filter((c) => c.command === "node.set_value");
-    expect(cmds).toHaveLength(1);
-    expect(cmds[0]?.args).toMatchObject({
-      nodeId: 7,
-      valueId: { commandClass: 99, property: "userIdStatus", propertyKey: 3 },
-      value: 0,
-    });
+it("clearUserCode sets userIdStatus to 0", async () => {
+  await client.start();
+  server.onCommand("node.set_value", () => null);
+  await client.clearUserCode(7, 3);
+  const cmds = server.commands.filter((c) => c.command === "node.set_value");
+  expect(cmds).toHaveLength(1);
+  expect(cmds[0]?.args).toMatchObject({
+    nodeId: 7,
+    valueId: { commandClass: 99, property: "userIdStatus", propertyKey: 3 },
+    value: 0,
   });
+});
 
-  it("unlock notification event fires on the bus", async () => {
-    const seen: Array<{ lockId: string; slot: number }> = [];
-    bus.on("unlock", (e) => seen.push({ lockId: e.lockId, slot: e.slot }));
-    await client.start();
-    server.pushEvent({ source: "node", event: "notification", nodeId: 7, args: { userId: 3 } });
-    await new Promise((r) => setTimeout(r, 20));
-    expect(seen).toEqual([{ lockId: "node-7", slot: 3 }]);
-  });
+it("unlock notification event fires on the bus", async () => {
+  const seen: Array<{ lockId: string; slot: number }> = [];
+  bus.on("unlock", (e) => seen.push({ lockId: e.lockId, slot: e.slot }));
+  await client.start();
+  server.pushEvent({ source: "node", event: "notification", nodeId: 7, args: { userId: 3 } });
+  await new Promise((r) => setTimeout(r, 20));
+  expect(seen).toEqual([{ lockId: "node-7", slot: 3 }]);
+});
 ```
 
 - [ ] **Step 2: Run tests**
@@ -2040,6 +2066,7 @@ git commit -m "test(zwave): cover setUserCode/clearUserCode and unlock notificat
 ### Task 14: Reconciler with per-lock queue + retry
 
 **Files:**
+
 - Create: `src/reconciler/reconciler.ts`
 - Create: `src/reconciler/types.ts`
 - Create: `tests/unit/reconciler.test.ts`
@@ -2083,7 +2110,10 @@ interface CallLog {
   pin?: string;
 }
 
-function makeWriter(failures: Record<string, number> = {}): { writer: LockWriter; calls: CallLog[] } {
+function makeWriter(failures: Record<string, number> = {}): {
+  writer: LockWriter;
+  calls: CallLog[];
+} {
   const calls: CallLog[] = [];
   const counters = { ...failures };
   const maybeFail = (key: string) => {
@@ -2126,7 +2156,14 @@ describe("Reconciler", () => {
 
   it("sets a new code on every lock", async () => {
     const { writer, calls } = makeWriter();
-    const rec = new Reconciler({ cache, writer, locks: LOCKS, secret: SECRET, retries: 0, debounceMs: 0 });
+    const rec = new Reconciler({
+      cache,
+      writer,
+      locks: LOCKS,
+      secret: SECRET,
+      retries: 0,
+      debounceMs: 0,
+    });
     await rec.reconcileAll([{ id: "u1", name: "Alice", pin: "1234", slot: 3, enabled: true }]);
     expect(calls).toEqual([
       { op: "set", nodeId: 7, slot: 3, pin: "1234" },
@@ -2138,7 +2175,14 @@ describe("Reconciler", () => {
 
   it("issues no writes when cache matches desired", async () => {
     const { writer, calls } = makeWriter();
-    const rec = new Reconciler({ cache, writer, locks: LOCKS, secret: SECRET, retries: 0, debounceMs: 0 });
+    const rec = new Reconciler({
+      cache,
+      writer,
+      locks: LOCKS,
+      secret: SECRET,
+      retries: 0,
+      debounceMs: 0,
+    });
     await rec.reconcileAll([{ id: "u1", name: "Alice", pin: "1234", slot: 3, enabled: true }]);
     calls.length = 0;
     await rec.reconcileAll([{ id: "u1", name: "Alice", pin: "1234", slot: 3, enabled: true }]);
@@ -2147,7 +2191,14 @@ describe("Reconciler", () => {
 
   it("clears slots for deleted users", async () => {
     const { writer, calls } = makeWriter();
-    const rec = new Reconciler({ cache, writer, locks: LOCKS, secret: SECRET, retries: 0, debounceMs: 0 });
+    const rec = new Reconciler({
+      cache,
+      writer,
+      locks: LOCKS,
+      secret: SECRET,
+      retries: 0,
+      debounceMs: 0,
+    });
     await rec.reconcileAll([{ id: "u1", name: "Alice", pin: "1234", slot: 3, enabled: true }]);
     calls.length = 0;
     await rec.reconcileAll([]);
@@ -2159,7 +2210,15 @@ describe("Reconciler", () => {
 
   it("retries up to the configured count before marking error", async () => {
     const { writer, calls } = makeWriter({ "set-7-3": 3 });
-    const rec = new Reconciler({ cache, writer, locks: LOCKS, secret: SECRET, retries: 2, debounceMs: 0, retryDelayMs: 1 });
+    const rec = new Reconciler({
+      cache,
+      writer,
+      locks: LOCKS,
+      secret: SECRET,
+      retries: 2,
+      debounceMs: 0,
+      retryDelayMs: 1,
+    });
     await rec.reconcileAll([{ id: "u1", name: "Alice", pin: "1234", slot: 3, enabled: true }]);
     const setsOnFront = calls.filter((c) => c.nodeId === 7 && c.op === "set");
     expect(setsOnFront).toHaveLength(0);
@@ -2176,7 +2235,14 @@ describe("Reconciler", () => {
       },
       async clearUserCode() {},
     };
-    const rec = new Reconciler({ cache, writer, locks: [LOCKS[0]!], secret: SECRET, retries: 0, debounceMs: 0 });
+    const rec = new Reconciler({
+      cache,
+      writer,
+      locks: [LOCKS[0]!],
+      secret: SECRET,
+      retries: 0,
+      debounceMs: 0,
+    });
     await rec.reconcileAll([
       { id: "u1", name: "A", pin: "1", slot: 1, enabled: true },
       { id: "u2", name: "B", pin: "2", slot: 2, enabled: true },
@@ -2187,7 +2253,14 @@ describe("Reconciler", () => {
 
   it("debounces rapid scheduleReconcile calls into one pass", async () => {
     const { writer, calls } = makeWriter();
-    const rec = new Reconciler({ cache, writer, locks: LOCKS, secret: SECRET, retries: 0, debounceMs: 20 });
+    const rec = new Reconciler({
+      cache,
+      writer,
+      locks: LOCKS,
+      secret: SECRET,
+      retries: 0,
+      debounceMs: 20,
+    });
     rec.scheduleReconcile(() => [{ id: "u1", name: "A", pin: "1", slot: 1, enabled: true }]);
     rec.scheduleReconcile(() => [
       { id: "u1", name: "A", pin: "1", slot: 1, enabled: true },
@@ -2332,6 +2405,7 @@ git commit -m "feat(reconciler): per-lock queue, retry with backoff, and debounc
 ### Task 15: HA notifier
 
 **Files:**
+
 - Create: `src/notifier/ha-notifier.ts`
 - Create: `tests/unit/ha-notifier.test.ts`
 
@@ -2482,6 +2556,7 @@ git commit -m "feat(notifier): home assistant notify service client"
 ### Task 16: Event log (append + tail + rotate)
 
 **Files:**
+
 - Create: `src/log/event-log.ts`
 - Create: `src/log/types.ts`
 - Create: `tests/unit/event-log.test.ts`
@@ -2524,7 +2599,11 @@ export interface LoggedNotificationFailed {
   slot: number;
 }
 
-export type LoggedEvent = LoggedUnlock | LoggedWrite | LoggedKeypadChange | LoggedNotificationFailed;
+export type LoggedEvent =
+  | LoggedUnlock
+  | LoggedWrite
+  | LoggedKeypadChange
+  | LoggedNotificationFailed;
 ```
 
 - [ ] **Step 2: Write failing tests**
@@ -2660,6 +2739,7 @@ git commit -m "feat(log): append-only jsonl event log with size-based rotation"
 ### Task 17: Verify scheduler
 
 **Files:**
+
 - Create: `src/verify/scheduler.ts`
 - Create: `tests/unit/verify-scheduler.test.ts`
 
@@ -2786,6 +2866,7 @@ git commit -m "feat(verify): staggered per-lock verify scheduler"
 ### Task 18: Fastify skeleton + healthz
 
 **Files:**
+
 - Create: `src/http/views/layout.ts`
 - Create: `src/http/server.ts`
 - Create: `src/http/routes/health.ts`
@@ -2905,6 +2986,7 @@ git commit -m "feat(http): fastify server skeleton with healthz and layout"
 ### Task 19: Users routes + views
 
 **Files:**
+
 - Create: `src/http/views/users.ts`
 - Create: `src/http/routes/users.ts`
 - Modify: `src/http/server.ts` (register + accept Store dep)
@@ -3099,7 +3181,10 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   app.register(formbody);
   registerHealthRoutes(app);
   if (deps.store) {
-    registerUsersRoutes(app, { store: deps.store, onChange: deps.onUsersChanged ?? (() => undefined) });
+    registerUsersRoutes(app, {
+      store: deps.store,
+      onChange: deps.onUsersChanged ?? (() => undefined),
+    });
   }
   app.get("/", (_req, reply) => reply.redirect("/users"));
   return app;
@@ -3123,6 +3208,7 @@ git commit -m "feat(http): user crud routes and server-rendered views"
 ### Task 20: Locks routes + views + manual resync/verify
 
 **Files:**
+
 - Create: `src/http/views/locks.ts`
 - Create: `src/http/routes/locks.ts`
 - Modify: `src/http/server.ts` (register + accept lock deps)
@@ -3307,7 +3393,10 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   app.register(formbody);
   registerHealthRoutes(app);
   if (deps.store) {
-    registerUsersRoutes(app, { store: deps.store, onChange: deps.onUsersChanged ?? (() => undefined) });
+    registerUsersRoutes(app, {
+      store: deps.store,
+      onChange: deps.onUsersChanged ?? (() => undefined),
+    });
   }
   if (deps.locks && deps.cache) {
     registerLocksRoutes(app, {
@@ -3339,6 +3428,7 @@ git commit -m "feat(http): locks list page with manual resync and verify"
 ### Task 21: Events routes + SSE stream
 
 **Files:**
+
 - Create: `src/http/views/events.ts`
 - Create: `src/http/routes/events.ts`
 - Modify: `src/http/server.ts`
@@ -3421,7 +3511,9 @@ export function renderEventsPage(events: readonly LoggedEvent[]): string {
 function describeEvent(e: LoggedEvent): string {
   switch (e.type) {
     case "unlock":
-      return e.userName ? `${e.userName} unlocked ${e.lockName}` : `Unknown slot ${e.slot} unlocked ${e.lockName}`;
+      return e.userName
+        ? `${e.userName} unlocked ${e.lockName}`
+        : `Unknown slot ${e.slot} unlocked ${e.lockName}`;
     case "write":
       return `Write slot ${e.slot} on ${e.lockId}: ${e.outcome}`;
     case "keypad_change":
@@ -3504,7 +3596,10 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   app.register(formbody);
   registerHealthRoutes(app);
   if (deps.store) {
-    registerUsersRoutes(app, { store: deps.store, onChange: deps.onUsersChanged ?? (() => undefined) });
+    registerUsersRoutes(app, {
+      store: deps.store,
+      onChange: deps.onUsersChanged ?? (() => undefined),
+    });
   }
   if (deps.locks && deps.cache) {
     registerLocksRoutes(app, {
@@ -3541,6 +3636,7 @@ git commit -m "feat(http): events page with log tail and sse stream"
 ### Task 22: App entrypoint wiring
 
 **Files:**
+
 - Create: `src/app.ts`
 - Create: `src/index.ts`
 - Create: `tests/integration/startup.test.ts`
@@ -3598,12 +3694,19 @@ describe("app startup", () => {
     await app.waitForIdle();
 
     const setCalls = server.commands.filter(
-      (c) => c.command === "node.set_value" && (c.args?.valueId as { property?: string } | undefined)?.property === "userCode",
+      (c) =>
+        c.command === "node.set_value" &&
+        (c.args?.valueId as { property?: string } | undefined)?.property === "userCode",
     );
     expect(setCalls).toHaveLength(1);
     expect(setCalls[0]?.args).toMatchObject({ nodeId: 7, value: "1234" });
 
-    server.pushEvent({ source: "node", event: "notification", nodeId: 7, args: { userId: user.slot } });
+    server.pushEvent({
+      source: "node",
+      event: "notification",
+      nodeId: 7,
+      args: { userId: user.slot },
+    });
     await new Promise((r) => setTimeout(r, 50));
     expect(haFetch).toHaveBeenCalled();
     const body = JSON.parse(haFetch.mock.calls.at(-1)![1].body as string);
@@ -3751,7 +3854,10 @@ export async function buildApp(opts: BuildAppOptions): Promise<RunningApp> {
           updatedAt: new Date().toISOString(),
           ...(s.status === "enabled" && s.pin
             ? {
-                pinFingerprint: (await import("./cache/fingerprint.js")).fingerprintPin(opts.localSecret, s.pin),
+                pinFingerprint: (await import("./cache/fingerprint.js")).fingerprintPin(
+                  opts.localSecret,
+                  s.pin,
+                ),
               }
             : {}),
         };
@@ -3784,9 +3890,7 @@ export async function buildApp(opts: BuildAppOptions): Promise<RunningApp> {
   const start = async (): Promise<void> => {
     await zwave.start();
     // First-run verify for any lock without a cache entry
-    const firstRun = config.locks
-      .filter((l) => !cache.getLock(l.id))
-      .map((l) => l.id);
+    const firstRun = config.locks.filter((l) => !cache.getLock(l.id)).map((l) => l.id);
     for (const id of firstRun) await doVerify(id);
     reconciler.scheduleReconcile(desired);
     verifyScheduler.schedule(config.locks.map((l) => l.id));
@@ -3868,6 +3972,7 @@ git commit -m "feat(app): wire store, cache, zwave, reconciler, notifier, http"
 ### Task 23: Dockerfile + docker-compose example
 
 **Files:**
+
 - Create: `Dockerfile`
 - Create: `.dockerignore`
 - Create: `docker-compose.example.yml`
@@ -3947,6 +4052,7 @@ git commit -m "chore(docker): multi-stage build and compose example"
 ### Task 24: README + smoke-test checklist
 
 **Files:**
+
 - Create: `README.md`
 - Create: `docs/smoke-test-checklist.md`
 - Create: `docs/example-locks.yaml`
@@ -3986,16 +4092,19 @@ locks:
 Run through this before releasing a build. Assumes the service is running against real locks and a real Home Assistant.
 
 ## Prereqs
+
 - [ ] `docker compose up -d` succeeds
 - [ ] `curl -f http://localhost:8080/healthz` returns `ok`
 - [ ] UI loads at `/users`, `/locks`, `/events`
 
 ## First-run seed
+
 - [ ] Fresh `/data` (no `state.json`)
 - [ ] Start service; `/locks` shows each lock with "Last verify" populated within a minute
 - [ ] `state.json` on disk contains a `slots` map per lock
 
 ## Add user
+
 - [ ] Add user "Alice" / PIN "1234"
 - [ ] `/locks` shows "Last reconcile: ok" on each lock within a few seconds
 - [ ] Alice's code works on every physical lock
@@ -4003,23 +4112,28 @@ Run through this before releasing a build. Assumes the service is running agains
 - [ ] HA notification fires with the expected message
 
 ## Change PIN
+
 - [ ] Delete "Alice", re-add as "Alice" / PIN "5678"
 - [ ] Old PIN no longer works; new PIN works on every lock
 
 ## Disable/enable
+
 - [ ] Disable Alice → code stops working on every lock
 - [ ] Enable Alice → code works again on every lock
 
 ## Delete
+
 - [ ] Delete Alice → code stops working, slot is free for the next user
 
 ## Drift detection
+
 - [ ] Manually program a code at one lock's keypad (slot 10)
 - [ ] Click "Verify now" on that lock
 - [ ] `/locks` / `state.json` reflects the new code in slot 10 with `status: enabled`
 - [ ] No auto-writes were issued to fix the drift
 
 ## Failure modes
+
 - [ ] Stop HA → unlock still logged in `/events` with "notification_failed"
 - [ ] Stop zwave-js-server → `/locks` shows connection error; service auto-reconnects when zwave is back
 ```
@@ -4050,11 +4164,12 @@ See the design spec: `docs/superpowers/specs/2026-04-21-zwave-lock-sync-design.m
 - `events.jsonl` — append-only unlock/log stream
 
 ## Development
-
 ```
+
 npm install
 npm test
 npm run dev
+
 ```
 
 See `docs/smoke-test-checklist.md` for pre-release verification.

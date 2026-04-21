@@ -108,8 +108,8 @@ verify:
   staggerMinutes: 60
 
 locks:
-  - id: front-door             # stable internal id; never changes
-    name: Front Door           # display name; used in notifications
+  - id: front-door # stable internal id; never changes
+    name: Front Door # display name; used in notifications
     nodeId: 7
     maxCodeSlots: 30
   - id: back-door
@@ -153,8 +153,13 @@ locks:
       "lastReconcileAt": "2026-04-21T…",
       "lastReconcileOutcome": "ok",
       "slots": {
-        "3": { "status": "enabled", "userId": "u_01HZ…", "pinFingerprint": "sha256:…", "updatedAt": "…" },
-        "4": { "status": "empty",   "updatedAt": "…" },
+        "3": {
+          "status": "enabled",
+          "userId": "u_01HZ…",
+          "pinFingerprint": "sha256:…",
+          "updatedAt": "…"
+        },
+        "4": { "status": "empty", "updatedAt": "…" },
         "5": { "status": "unknown" }
       }
     }
@@ -206,16 +211,16 @@ Scheduled polling is **not** a trigger.
 
 ### Write path by action
 
-| User action | Radio writes | Rationale |
-|---|---|---|
-| Create user | `setUserCode(slot, pin)` on every lock | New slot occupant everywhere |
-| Rename user | none | Name isn't stored on the lock |
-| Change PIN | `setUserCode(slot, newPin)` on every lock | Fingerprint differs from cache |
-| Disable user | `clearUserCode(slot)` on every lock | Remove from lock; keep slot reserved |
-| Enable user | `setUserCode(slot, pin)` on every lock | Repopulate |
-| Delete user | `clearUserCode(slot)` on every lock; remove from `users.json` | Free the slot |
-| Add lock (restart) | first-run verify, then fill-in reconcile | Build cache, then apply desired |
-| Remove lock (restart) | none | Out of reach; drop cache entry |
+| User action           | Radio writes                                                  | Rationale                            |
+| --------------------- | ------------------------------------------------------------- | ------------------------------------ |
+| Create user           | `setUserCode(slot, pin)` on every lock                        | New slot occupant everywhere         |
+| Rename user           | none                                                          | Name isn't stored on the lock        |
+| Change PIN            | `setUserCode(slot, newPin)` on every lock                     | Fingerprint differs from cache       |
+| Disable user          | `clearUserCode(slot)` on every lock                           | Remove from lock; keep slot reserved |
+| Enable user           | `setUserCode(slot, pin)` on every lock                        | Repopulate                           |
+| Delete user           | `clearUserCode(slot)` on every lock; remove from `users.json` | Free the slot                        |
+| Add lock (restart)    | first-run verify, then fill-in reconcile                      | Build cache, then apply desired      |
+| Remove lock (restart) | none                                                          | Out of reach; drop cache entry       |
 
 ### Execution rules
 
@@ -256,14 +261,14 @@ Keypad-triggered code changes observed on the same WebSocket (if exposed by the 
 
 ## Error handling
 
-| Failure | Behavior |
-|---|---|
-| `zwave-js-server` disconnected | Auto-reconnect (1 s → 30 s backoff). UI banner. Write queue dropped on disconnect and recomputed on reconnect. |
-| Node dead / unreachable | 2 retries, then `lastReconcileOutcome: "error"` for that lock. Other locks unaffected. |
-| HA unreachable for notifications | Log; append `notification_failed` entry to `events.jsonl`; no retry (stale security alerts are worse than missed ones). UI banner. |
-| Atomic file write fails | Return a clear error to the UI. Never leave a partial file. |
-| Invalid `locks.yaml` | Service starts, UI shows "Configuration error" page with specifics. |
-| Missing `HA_TOKEN` / `LOCAL_SECRET` | Service starts, UI disables notifications / fingerprinting respectively and flags the condition. |
+| Failure                             | Behavior                                                                                                                           |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `zwave-js-server` disconnected      | Auto-reconnect (1 s → 30 s backoff). UI banner. Write queue dropped on disconnect and recomputed on reconnect.                     |
+| Node dead / unreachable             | 2 retries, then `lastReconcileOutcome: "error"` for that lock. Other locks unaffected.                                             |
+| HA unreachable for notifications    | Log; append `notification_failed` entry to `events.jsonl`; no retry (stale security alerts are worse than missed ones). UI banner. |
+| Atomic file write fails             | Return a clear error to the UI. Never leave a partial file.                                                                        |
+| Invalid `locks.yaml`                | Service starts, UI shows "Configuration error" page with specifics.                                                                |
+| Missing `HA_TOKEN` / `LOCAL_SECRET` | Service starts, UI disables notifications / fingerprinting respectively and flags the condition.                                   |
 
 ## Observability
 
