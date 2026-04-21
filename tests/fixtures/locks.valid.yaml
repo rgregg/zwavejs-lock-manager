@@ -1,0 +1,22 @@
+zwaveJs:
+  url: ws://zwavejs:3000
+
+homeAssistant:
+  url: http://homeassistant.local:8123
+  token: ${HA_TOKEN}
+  notify:
+    service: notify.mobile_app_ryan
+
+verify:
+  intervalDays: 7
+  staggerMinutes: 60
+
+locks:
+  - id: front-door
+    name: Front Door
+    nodeId: 7
+    maxCodeSlots: 30
+  - id: back-door
+    name: Back Door
+    nodeId: 9
+    maxCodeSlots: 30

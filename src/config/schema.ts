@@ -1,0 +1,31 @@
+import { z } from "zod";
+
+export const LockConfigSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  nodeId: z.number().int().positive(),
+  maxCodeSlots: z.number().int().positive(),
+});
+
+export const LocksConfigSchema = z.object({
+  zwaveJs: z.object({
+    url: z.string().url(),
+  }),
+  homeAssistant: z.object({
+    url: z.string().url(),
+    token: z.string(),
+    notify: z.object({
+      service: z.string().min(1),
+    }),
+  }),
+  verify: z
+    .object({
+      intervalDays: z.number().int().positive().default(7),
+      staggerMinutes: z.number().int().nonnegative().default(60),
+    })
+    .default({ intervalDays: 7, staggerMinutes: 60 }),
+  locks: z.array(LockConfigSchema),
+});
+
+export type LockConfig = z.infer<typeof LockConfigSchema>;
+export type LocksConfig = z.infer<typeof LocksConfigSchema>;
