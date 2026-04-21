@@ -62,4 +62,19 @@ describe("loadLocksConfig", () => {
     expect(cfg.homeAssistant.token).toBe("");
     expect(cfg.warnings).toContain("Unresolved env var: HA_TOKEN");
   });
+
+  it("interpolates env vars inside quoted strings", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "cfg-"));
+    const path = join(dir, "quoted.yaml");
+    await writeFile(
+      path,
+      [
+        'zwaveJs: { url: "ws://z:3000" }',
+        'homeAssistant: { url: "http://h", token: "${HA_TOKEN}", notify: { service: "notify.x" } }',
+        "locks: []",
+      ].join("\n"),
+    );
+    const cfg = await loadLocksConfig(path, { env: { HA_TOKEN: "hello" } });
+    expect(cfg.homeAssistant.token).toBe("hello");
+  });
 });

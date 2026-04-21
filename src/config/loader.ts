@@ -12,22 +12,43 @@ export interface LoadOptions {
 
 const ENV_PATTERN = /\$\{([A-Z_][A-Z0-9_]*)\}/g;
 
+function interpolateValue(
+  value: unknown,
+  env: Record<string, string | undefined>,
+  warnings: string[],
+): unknown {
+  if (typeof value === "string") {
+    return value.replace(ENV_PATTERN, (_match, name: string) => {
+      const v = env[name];
+      if (v === undefined) {
+        warnings.push(`Unresolved env var: ${name}`);
+        return "";
+      }
+      return v;
+    });
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => interpolateValue(item, env, warnings));
+  }
+  if (value !== null && typeof value === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      result[k] = interpolateValue(v, env, warnings);
+    }
+    return result;
+  }
+  return value;
+}
+
 export async function loadLocksConfig(path: string, opts: LoadOptions = {}): Promise<LoadedConfig> {
   const env = opts.env ?? process.env;
   const raw = await readFile(path, "utf8");
   const warnings: string[] = [];
-  const interpolated = raw.replace(ENV_PATTERN, (_match, name: string) => {
-    const v = env[name];
-    if (v === undefined) {
-      warnings.push(`Unresolved env var: ${name}`);
-      // Return a YAML-quoted empty string so the field parses as "" not null
-      return '""';
-    }
-    return v;
-  });
 
-  const parsed = parseYaml(interpolated);
-  const result = LocksConfigSchema.safeParse(parsed);
+  const parsed = parseYaml(raw);
+  const interpolated = interpolateValue(parsed, env, warnings);
+
+  const result = LocksConfigSchema.safeParse(interpolated);
   if (!result.success) {
     throw new Error(`Invalid locks config: ${result.error.message}`);
   }
