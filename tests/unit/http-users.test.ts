@@ -44,7 +44,7 @@ describe("users routes", () => {
     expect(store.listUsers()).toHaveLength(1);
     const list = await app.inject({ method: "GET", url: "/users" });
     expect(list.body).toContain("Alice");
-    expect(list.body).not.toContain("1234"); // PIN never rendered
+    expect(list.body).toContain("1234");
   });
 
   it("POST /users/:id/toggle flips enabled", async () => {
@@ -110,5 +110,56 @@ describe("users routes", () => {
       payload: "name=Bob&pin=",
     });
     expect(called).toBe(1);
+  });
+
+  it("GET /users/:id/row returns the display row with name and PIN", async () => {
+    const u = await store.addUser({ name: "Alice", pin: "1234" });
+    const res = await app.inject({ method: "GET", url: `/users/${u.id}/row` });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/text\/html/);
+    expect(res.body).toContain("Alice");
+    expect(res.body).toContain("1234");
+    expect(res.body).toContain(`id="user-${u.id}"`);
+  });
+
+  it("GET /users/:id/edit-form returns an edit row with name and pin inputs pre-filled", async () => {
+    const u = await store.addUser({ name: "Alice", pin: "1234" });
+    const res = await app.inject({ method: "GET", url: `/users/${u.id}/edit-form` });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/text\/html/);
+    expect(res.body).toContain('<input form="edit-');
+    expect(res.body).toContain('name="name"');
+    expect(res.body).toContain('name="pin"');
+    expect(res.body).toContain('value="Alice"');
+    expect(res.body).toContain('value="1234"');
+  });
+
+  it("POST /users/:id/edit with HX-Request returns display row HTML", async () => {
+    const u = await store.addUser({ name: "Alice", pin: "1111" });
+    const res = await app.inject({
+      method: "POST",
+      url: `/users/${u.id}/edit`,
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        "hx-request": "true",
+      },
+      payload: "name=Allison&pin=2222",
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/text\/html/);
+    expect(res.body).toContain("Allison");
+    expect(res.body).toContain("2222");
+    expect(res.body).toContain(`id="user-${u.id}"`);
+  });
+
+  it("POST /users/:id/edit with an invalid PIN returns 400", async () => {
+    const u = await store.addUser({ name: "Alice", pin: "1111" });
+    const res = await app.inject({
+      method: "POST",
+      url: `/users/${u.id}/edit`,
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      payload: "name=Alice&pin=abc",
+    });
+    expect(res.statusCode).toBe(400);
   });
 });

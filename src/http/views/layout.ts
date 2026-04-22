@@ -16,6 +16,9 @@ export function layout(title: string, body: string, opts?: { readOnly?: boolean 
     th, td { padding: 0.5rem; text-align: left; border-bottom: 1px solid #ddd; }
     .status-ok { color: #080; } .status-error { color: #c00; } .status-unknown { color: #888; }
     form.inline { display: inline; }
+    td.actions { white-space: nowrap; }
+    td.actions button { margin-right: 0.25rem; }
+    td.actions form.inline button { margin-right: 0.25rem; }
   </style>
 </head>
 <body>

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Store } from "../../store/store.js";
 import type { UserPatch } from "../../store/types.js";
-import { renderUsersPage } from "../views/users.js";
+import { renderUsersPage, renderUserRow, renderUserRowEdit } from "../views/users.js";
 
 interface UsersDeps {
   store: Store;
@@ -26,6 +26,9 @@ export function registerUsersRoutes(app: FastifyInstance, deps: UsersDeps): void
     async (req, reply) => {
       const user = deps.store.getUser(req.params.id);
       if (!user) return reply.code(404).send("not found");
+      if (req.body.pin && req.body.pin !== "" && !/^[0-9]{4,10}$/.test(req.body.pin)) {
+        return reply.code(400).send("invalid pin");
+      }
       const patch: UserPatch = {};
       if (req.body.name && req.body.name !== user.name) patch.name = req.body.name;
       if (req.body.pin && req.body.pin !== "") patch.pin = req.body.pin;
@@ -33,9 +36,29 @@ export function registerUsersRoutes(app: FastifyInstance, deps: UsersDeps): void
         await deps.store.updateUser(user.id, patch);
         deps.onChange();
       }
+      const htmx = req.headers["hx-request"] === "true";
+      if (htmx) {
+        const updated = deps.store.getUser(user.id)!;
+        reply.type("text/html");
+        return renderUserRow(updated);
+      }
       reply.redirect("/users");
     },
   );
+
+  app.get<{ Params: { id: string } }>("/users/:id/row", async (req, reply) => {
+    const user = deps.store.getUser(req.params.id);
+    if (!user) return reply.code(404).send("not found");
+    reply.type("text/html");
+    return renderUserRow(user);
+  });
+
+  app.get<{ Params: { id: string } }>("/users/:id/edit-form", async (req, reply) => {
+    const user = deps.store.getUser(req.params.id);
+    if (!user) return reply.code(404).send("not found");
+    reply.type("text/html");
+    return renderUserRowEdit(user);
+  });
 
   app.post<{ Params: { id: string } }>("/users/:id/toggle", async (req, reply) => {
     const user = deps.store.getUser(req.params.id);
