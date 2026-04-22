@@ -5,7 +5,8 @@ interface VerifySchedulerOptions {
 }
 
 export class VerifyScheduler {
-  private timers: NodeJS.Timeout[] = [];
+  private timeouts: NodeJS.Timeout[] = [];
+  private intervals: NodeJS.Timeout[] = [];
   constructor(private readonly opts: VerifySchedulerOptions) {}
 
   schedule(lockIds: readonly string[]): void {
@@ -17,15 +18,17 @@ export class VerifyScheduler {
         const interval = setInterval(() => {
           void this.run(id);
         }, this.opts.intervalMs);
-        this.timers.push(interval);
+        this.intervals.push(interval);
       }, idx * step);
-      this.timers.push(initial);
+      this.timeouts.push(initial);
     });
   }
 
   stop(): void {
-    for (const t of this.timers) clearTimeout(t);
-    this.timers = [];
+    for (const t of this.timeouts) clearTimeout(t);
+    for (const i of this.intervals) clearInterval(i);
+    this.timeouts = [];
+    this.intervals = [];
   }
 
   private run(id: string): void {
