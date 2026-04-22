@@ -210,7 +210,9 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
     bus,
     status: tracker,
     onUsersChanged: () => reconciler.scheduleReconcile(desired),
-    onResync: () => reconciler.scheduleReconcile(desired),
+    onResync: (lockId) => {
+      void reconciler.reconcileLockOnly(lockId, desired());
+    },
     onVerify: (id) => void doVerify(id),
     onDriftClear: (lockId) => {
       const lock = lockById.get(lockId);
@@ -222,7 +224,7 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
           void cache.clearSlotDrift(lockId, Number(slotKey));
         }
       }
-      reconciler.scheduleReconcile(desired);
+      void reconciler.reconcileLockOnly(lockId, desired());
     },
   });
 

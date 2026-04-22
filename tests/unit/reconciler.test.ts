@@ -194,6 +194,26 @@ describe("Reconciler", () => {
     expect(results).toEqual([{ outcome: "error" }, { outcome: "ok" }]);
   });
 
+  it("reconcileLockOnly reconciles a single lock, not others", async () => {
+    const cache = await makeCache();
+    const { writer, calls } = makeWriter();
+    const rec = new Reconciler({ cache, writer, locks: LOCKS, secret: SECRET, retries: 0, debounceMs: 0 });
+    await rec.reconcileLockOnly("front-door", [
+      { id: "u1", name: "A", pin: "1", slot: 1, enabled: true },
+    ]);
+    const frontCalls = calls.filter((c) => c.nodeId === 7);
+    const backCalls = calls.filter((c) => c.nodeId === 9);
+    expect(frontCalls).toHaveLength(1);
+    expect(backCalls).toHaveLength(0);
+  });
+
+  it("reconcileLockOnly throws for unknown lock", async () => {
+    const cache = await makeCache();
+    const { writer } = makeWriter();
+    const rec = new Reconciler({ cache, writer, locks: LOCKS, secret: SECRET });
+    await expect(rec.reconcileLockOnly("nope", [])).rejects.toThrow(/unknown lock/i);
+  });
+
   it("debounces rapid scheduleReconcile calls into one pass", async () => {
     const { writer, calls } = makeWriter();
     const rec = new Reconciler({

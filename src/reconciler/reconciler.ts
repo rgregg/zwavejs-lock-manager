@@ -51,6 +51,12 @@ export class Reconciler {
     await Promise.all(this.opts.locks.map((lock) => this.reconcileLock(lock, desired)));
   }
 
+  async reconcileLockOnly(lockId: string, desired: readonly DiffUser[]): Promise<void> {
+    const lock = this.opts.locks.find((l) => l.id === lockId);
+    if (!lock) throw new Error(`unknown lock: ${lockId}`);
+    await this.reconcileLock(lock, desired);
+  }
+
   private async reconcileLock(lock: LockSyncTarget, desired: readonly DiffUser[]): Promise<void> {
     const prior = this.queues.get(lock.id) ?? Promise.resolve();
     const next = prior.then(() => this.doReconcileLock(lock, desired));
