@@ -32,6 +32,11 @@ describe("ZWaveJSClient", () => {
     expect(events).toEqual(["connected"]);
   });
 
+  it("performs set_api_schema and start_listening handshake during start", async () => {
+    await client.start();
+    expect(server.commands.map((c) => c.command)).toEqual(["set_api_schema", "start_listening"]);
+  });
+
   it("emits disconnected then connected on reconnect", async () => {
     const events: string[] = [];
     bus.on("connection", (e) => events.push(e.status));

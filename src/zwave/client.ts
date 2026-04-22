@@ -1,7 +1,13 @@
+// Targets zwave-js-server schema version 37 (released with zwave-js-server 1.34+).
+// Minimum acceptable is 25 — older servers won't support User Code CC value writes
+// as we use them. If the server offers an older max, connection fails at startup.
 import WebSocket from "ws";
 import { randomUUID } from "node:crypto";
 import type { EventBus } from "../events/bus.js";
 import type { UserCodeSlot } from "./types.js";
+
+const TARGET_SCHEMA_VERSION = 37;
+const MIN_ACCEPTABLE_SCHEMA_VERSION = 25;
 
 interface ZWaveJSClientOptions {
   url: string;
@@ -47,22 +53,102 @@ export class ZWaveJSClient {
       const ws = new WebSocket(this.opts.url);
       this.socket = ws;
 
-      const onOpenDone = () => {
-        this.reconnectAttempts = 0;
-        this.opts.bus.emit("connection", {
-          ts: new Date().toISOString(),
-          source: "zwaveJs",
-          status: "connected",
-        });
-        resolve();
+      let handshakeDone = false;
+
+      const fail = (err: Error) => {
+        if (!handshakeDone) {
+          handshakeDone = true;
+          ws.terminate();
+          reject(err);
+        }
       };
 
-      ws.once("open", onOpenDone);
       ws.once("error", (err) => {
-        if (this.reconnectAttempts === 0) reject(err as Error);
+        if (!handshakeDone) fail(err as Error);
       });
-      ws.on("message", (raw) => this.handleMessage(raw.toString()));
-      ws.on("close", () => this.onClose());
+
+      ws.once("close", () => {
+        if (!handshakeDone) {
+          fail(new Error("connection closed during handshake"));
+        } else {
+          this.onClose();
+        }
+      });
+
+      ws.once("open", () => {
+        // Wait for version message, then perform handshake
+        ws.once("message", (raw) => {
+          let versionMsg: Record<string, unknown>;
+          try {
+            versionMsg = JSON.parse(raw.toString());
+          } catch {
+            fail(new Error("malformed version message from server"));
+            return;
+          }
+
+          if (versionMsg.type !== "version") {
+            fail(new Error(`expected version message, got: ${String(versionMsg.type)}`));
+            return;
+          }
+
+          const maxSchemaVersion = versionMsg.maxSchemaVersion;
+          if (typeof maxSchemaVersion !== "number") {
+            fail(new Error("version message missing maxSchemaVersion"));
+            return;
+          }
+
+          if (maxSchemaVersion < MIN_ACCEPTABLE_SCHEMA_VERSION) {
+            fail(
+              new Error(
+                `server maxSchemaVersion ${maxSchemaVersion} is below minimum acceptable ${MIN_ACCEPTABLE_SCHEMA_VERSION}`,
+              ),
+            );
+            return;
+          }
+
+          const schemaVersion = Math.min(TARGET_SCHEMA_VERSION, maxSchemaVersion);
+
+          // Switch to normal message handler for result routing during handshake
+          ws.on("message", (data) => this.handleMessage(data.toString()));
+
+          // Perform set_api_schema then start_listening
+          this.sendHandshake(ws, schemaVersion)
+            .then(() => {
+              handshakeDone = true;
+              this.reconnectAttempts = 0;
+
+              // Now that close during handshake won't fire, wire up onClose for future closes
+              ws.removeAllListeners("close");
+              ws.on("close", () => this.onClose());
+
+              this.opts.bus.emit("connection", {
+                ts: new Date().toISOString(),
+                source: "zwaveJs",
+                status: "connected",
+              });
+              resolve();
+            })
+            .catch((err) => {
+              fail(err as Error);
+            });
+        });
+      });
+    });
+  }
+
+  private async sendHandshake(ws: WebSocket, schemaVersion: number): Promise<void> {
+    // set_api_schema
+    await this.sendAndWait(ws, "set_api_schema", { schemaVersion });
+    // start_listening — ignore result.state payload
+    await this.sendAndWait(ws, "start_listening", {});
+  }
+
+  private sendAndWait(ws: WebSocket, command: string, params: Record<string, unknown>): Promise<unknown> {
+    return new Promise((resolve, reject) => {
+      const messageId = randomUUID();
+      const payload = { messageId, command, ...params };
+      this.pending.set(messageId, { resolve, reject });
+      ws.send(JSON.stringify(payload));
     });
   }
 
