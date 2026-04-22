@@ -3,15 +3,13 @@ import { createLogger } from "./util/logger.js";
 
 const log = createLogger();
 const dataDir = process.env.DATA_DIR ?? "/data";
-const localSecret = process.env.LOCAL_SECRET;
 const port = Number(process.env.PORT ?? 8080);
 
-if (!localSecret) {
-  log.error("LOCAL_SECRET env var is required");
-  process.exit(1);
-}
-
-const app = await buildApp({ dataDir, localSecret, httpPort: port });
+const app = await buildApp({
+  dataDir,
+  localSecret: process.env.LOCAL_SECRET ?? "", // empty string triggers error mode
+  httpPort: port,
+});
 await app.start();
 log.info({ port }, "listening");
 

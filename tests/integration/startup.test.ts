@@ -43,7 +43,8 @@ describe("app startup", () => {
   it("starts, reconciles new users, and fires notifications on unlock", async () => {
     app = await buildApp({ dataDir, localSecret: "s" });
     await app.start();
-    const user = await app.store.addUser({ name: "Alice", pin: "1234" });
+    expect(app.store).toBeDefined();
+    const user = await app.store!.addUser({ name: "Alice", pin: "1234" });
     await app.waitForIdle();
 
     const setCalls = server.commands.filter(
@@ -71,7 +72,8 @@ describe("app startup", () => {
     app = await buildApp({ dataDir, localSecret: "s" });
 
     // Pre-populate the user so we know the slot (slot 1 is first allocated)
-    const user = await app.store.addUser({ name: "Bob", pin: "5678" });
+    expect(app.store).toBeDefined();
+    const user = await app.store!.addUser({ name: "Bob", pin: "5678" });
     const driftedSlot = user.slot;
 
     // Mock: for verify (getAllUserCodes), the lock reports slot driftedSlot as ENABLED
@@ -95,7 +97,7 @@ describe("app startup", () => {
     const verifyPromise = new Promise<void>((resolve) => {
       // Wait for verify to settle by observing cache state
       const check = () => {
-        const state = app!.cache.getLock("front");
+        const state = app!.cache!.getLock("front");
         if (state?.lastVerifiedAt) resolve();
         else setTimeout(check, 20);
       };
@@ -104,7 +106,7 @@ describe("app startup", () => {
     await verifyPromise;
 
     // The cache should mark the slot as drifted
-    const state = app.cache.getLock("front");
+    const state = app.cache!.getLock("front");
     expect(state?.slots[String(driftedSlot)]?.drifted).toBe(true);
 
     // Clear the command log so we can observe what happens next
@@ -114,7 +116,7 @@ describe("app startup", () => {
     server.onCommand("node.get_value", () => 0);
 
     // Add a second user — this triggers a reconcile, but the drifted slot should NOT be written
-    await app.store.addUser({ name: "Carol", pin: "1111" });
+    await app.store!.addUser({ name: "Carol", pin: "1111" });
     await app.waitForIdle();
 
     // No set_value commands should target the drifted slot

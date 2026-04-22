@@ -13,8 +13,9 @@ import type { DiffUser } from "./reconciler/diff.js";
 import { HaNotifier } from "./notifier/ha-notifier.js";
 import { EventLog } from "./log/event-log.js";
 import { VerifyScheduler } from "./verify/scheduler.js";
-import { buildServer } from "./http/server.js";
+import { buildServer, buildErrorServer } from "./http/server.js";
 import { createLogger } from "./util/logger.js";
+import type { Logger } from "pino";
 
 export interface BuildAppOptions {
   dataDir: string;
@@ -23,10 +24,10 @@ export interface BuildAppOptions {
 }
 
 export interface RunningApp {
-  store: Store;
-  cache: LockStateCache;
   server: FastifyInstance;
-  config: LocksConfig;
+  store?: Store;
+  cache?: LockStateCache;
+  config?: LocksConfig;
   waitForIdle(): Promise<void>;
   stop(): Promise<void>;
   start(): Promise<void>;
@@ -34,6 +35,23 @@ export interface RunningApp {
 
 export async function buildApp(opts: BuildAppOptions): Promise<RunningApp> {
   const log = createLogger();
+  try {
+    return await buildFullApp(opts, log);
+  } catch (err) {
+    const message = (err as Error).message;
+    log.error({ err }, "configuration error; starting in error mode");
+    return buildErrorModeApp({
+      ...(opts.httpPort !== undefined ? { port: opts.httpPort } : {}),
+      message,
+    });
+  }
+}
+
+async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<RunningApp> {
+  if (!opts.localSecret) {
+    throw new Error("LOCAL_SECRET env var is required");
+  }
+
   const config = await loadLocksConfig(join(opts.dataDir, "locks.yaml"));
   for (const w of config.warnings) log.warn({ warning: w }, "config warning");
 
@@ -220,4 +238,26 @@ export async function buildApp(opts: BuildAppOptions): Promise<RunningApp> {
   };
 
   return { store, cache, server, config, start, stop, waitForIdle };
+}
+
+function buildErrorModeApp(opts: { port?: number; message: string }): RunningApp {
+  const server = buildErrorServer(opts.message);
+  let listening = false;
+
+  const start = async (): Promise<void> => {
+    if (opts.port !== undefined) {
+      await server.listen({ port: opts.port, host: "0.0.0.0" });
+      listening = true;
+    }
+  };
+
+  const stop = async (): Promise<void> => {
+    if (listening) await server.close();
+  };
+
+  const waitForIdle = async (): Promise<void> => {
+    // no-op in error mode
+  };
+
+  return { server, start, stop, waitForIdle };
 }

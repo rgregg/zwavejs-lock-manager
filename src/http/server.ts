@@ -9,6 +9,7 @@ import { registerHealthRoutes } from "./routes/health.js";
 import { registerUsersRoutes } from "./routes/users.js";
 import { registerLocksRoutes } from "./routes/locks.js";
 import { registerEventsRoutes } from "./routes/events.js";
+import { renderConfigErrorPage } from "./views/config-error.js";
 
 export interface ServerDeps {
   store?: Store;
@@ -45,5 +46,15 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
     registerEventsRoutes(app, { eventLog: deps.eventLog, bus: deps.bus });
   }
   app.get("/", (_req, reply) => reply.redirect("/users"));
+  return app;
+}
+
+export function buildErrorServer(message: string): FastifyInstance {
+  const app = Fastify({ logger: false });
+  registerHealthRoutes(app);
+  const html = renderConfigErrorPage(message);
+  app.setNotFoundHandler((_req, reply) => {
+    void reply.code(200).type("text/html").send(html);
+  });
   return app;
 }
