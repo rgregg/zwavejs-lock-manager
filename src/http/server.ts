@@ -42,10 +42,12 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
     registerLocksRoutes(app, {
       locks: deps.locks,
       cache: deps.cache,
+      ...(deps.store ? { store: deps.store } : {}),
       ...(deps.readOnly !== undefined ? { readOnly: deps.readOnly } : {}),
       onResync: deps.onResync ?? (() => undefined),
       onVerify: deps.onVerify ?? (() => undefined),
       onDriftClear: deps.onDriftClear ?? (() => undefined),
+      ...(deps.onUsersChanged ? { onChange: deps.onUsersChanged } : {}),
     });
   }
   if (deps.eventLog && deps.bus) {

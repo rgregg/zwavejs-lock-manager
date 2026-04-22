@@ -17,6 +17,7 @@ export interface UserInput {
   name: string;
   pin: string;
   enabled?: boolean;
+  slot?: number;
 }
 
 export interface UserPatch {

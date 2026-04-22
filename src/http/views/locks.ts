@@ -16,7 +16,7 @@ export function renderLocksPage(
         : 0;
       const driftBadge =
         driftedSlots > 0
-          ? `<span class="drift-badge">&#9888; Drift: ${driftedSlots} slot(s)</span>`
+          ? `<a href="/locks/${lock.id}/drift"><span class="drift-badge">&#9888; Drift: ${driftedSlots} slot(s)</span></a>`
           : "";
       const driftClearForm =
         driftedSlots > 0

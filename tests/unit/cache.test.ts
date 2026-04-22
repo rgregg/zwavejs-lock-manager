@@ -111,4 +111,25 @@ describe("LockStateCache", () => {
     expect(cache.getLock("front-door")?.slots["1"]?.drifted).toBeUndefined();
     expect(cache.getLock("front-door")?.slots["2"]?.drifted).toBe(true);
   });
+
+  it("adoptSlot binds a userId, keeps the fingerprint, and clears drifted + pin", async () => {
+    const { cache } = await makeCache();
+    await cache.replaceLock(
+      "front",
+      { "3": { status: "enabled", pinFingerprint: "sha256:abc", pin: "1234", updatedAt: "t" } },
+      [3],
+    );
+    await cache.adoptSlot("front", 3, "u_new");
+    const slot = cache.getLock("front")?.slots["3"];
+    expect(slot?.userId).toBe("u_new");
+    expect(slot?.pinFingerprint).toBe("sha256:abc");
+    expect(slot?.drifted).toBeUndefined();
+    expect(slot?.pin).toBeUndefined();
+  });
+
+  it("adoptSlot throws if slot is not enabled", async () => {
+    const { cache } = await makeCache();
+    await cache.replaceLock("front", { "3": { status: "empty", updatedAt: "t" } });
+    await expect(cache.adoptSlot("front", 3, "u_new")).rejects.toThrow(/not enabled/i);
+  });
 });

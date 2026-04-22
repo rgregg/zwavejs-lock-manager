@@ -100,6 +100,21 @@ export class LockStateCache {
     await this.persist();
   }
 
+  async adoptSlot(lockId: string, slot: number, userId: string): Promise<void> {
+    const lock = this.ensureLock(lockId);
+    const existing = lock.slots[String(slot)];
+    if (!existing || existing.status !== "enabled") {
+      throw new Error(`Cannot adopt slot ${slot} on ${lockId}: not enabled`);
+    }
+    lock.slots[String(slot)] = {
+      status: "enabled",
+      updatedAt: new Date().toISOString(),
+      ...(existing.pinFingerprint ? { pinFingerprint: existing.pinFingerprint } : {}),
+      userId,
+    };
+    await this.persist();
+  }
+
   async replaceLock(lockId: string, slots: Record<string, SlotState>, drifted?: number[]): Promise<void> {
     const lock = this.ensureLock(lockId);
     lock.slots = slots;

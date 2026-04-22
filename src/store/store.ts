@@ -45,7 +45,18 @@ export class Store extends EventEmitter {
 
   async addUser(input: UserInput): Promise<User> {
     const taken = new Set(this.users.map((u) => u.slot));
-    const slot = allocateSlot(taken, this.opts.maxSlots);
+    let slot: number;
+    if (input.slot !== undefined) {
+      if (input.slot < 1 || input.slot > this.opts.maxSlots) {
+        throw new Error(`Slot ${input.slot} is out of range [1, ${this.opts.maxSlots}]`);
+      }
+      if (taken.has(input.slot)) {
+        throw new Error(`Slot ${input.slot} already taken`);
+      }
+      slot = input.slot;
+    } else {
+      slot = allocateSlot(taken, this.opts.maxSlots);
+    }
     const now = new Date().toISOString();
     const user: User = {
       id: `u_${ulid()}`,

@@ -6,6 +6,7 @@ export interface SlotState {
   pinFingerprint?: string;
   updatedAt: string;
   drifted?: true; // when true, reconciler skips this slot
+  pin?: string; // populated ONLY for drifted enabled slots; cleared on adoption or drift resolution
 }
 
 export interface LockState {

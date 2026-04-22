@@ -92,4 +92,25 @@ describe("Store", () => {
     await tiny.addUser({ name: "A", pin: "1" });
     await expect(tiny.addUser({ name: "B", pin: "2" })).rejects.toThrow(/no slot/i);
   });
+
+  it("addUser accepts an explicit slot", async () => {
+    const { store } = await makeStore();
+    const u = await store.addUser({ name: "Alice", pin: "1111", slot: 5 });
+    expect(u.slot).toBe(5);
+  });
+
+  it("addUser rejects an out-of-range slot", async () => {
+    const { store } = await makeStore();
+    await expect(
+      store.addUser({ name: "X", pin: "1", slot: 99 }),
+    ).rejects.toThrow(/range/i);
+  });
+
+  it("addUser rejects a slot that's already taken", async () => {
+    const { store } = await makeStore();
+    await store.addUser({ name: "A", pin: "1", slot: 3 });
+    await expect(
+      store.addUser({ name: "B", pin: "2", slot: 3 }),
+    ).rejects.toThrow(/taken/i);
+  });
 });

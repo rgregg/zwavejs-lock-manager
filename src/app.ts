@@ -196,6 +196,16 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
         if (isDrifted) driftedSlots.push(slotNum);
       }
 
+      // Retain the PIN for drifted enabled slots so the user can adopt them.
+      const driftSet = new Set(driftedSlots);
+      for (const s of slots) {
+        const slotNum = s.slot;
+        const slotState = mapped[String(slotNum)];
+        if (slotState && s.status === "enabled" && s.pin && driftSet.has(slotNum)) {
+          slotState.pin = s.pin;
+        }
+      }
+
       await cache.replaceLock(lock.id, mapped, driftedSlots);
       log.info({ lockId, drifted: driftedSlots.length }, "verify completed");
     } catch (err) {
