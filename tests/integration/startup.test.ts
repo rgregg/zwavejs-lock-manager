@@ -129,6 +129,68 @@ describe("app startup", () => {
     expect(setCalls).toHaveLength(0);
   });
 
+  it("binds userId on non-drifted slots that match a desired user after verify", async () => {
+    // Preload users.json with a user at slot 3 with pin "1234"
+    app = await buildApp({ dataDir, localSecret: "s" });
+    expect(app.store).toBeDefined();
+    const user = await app.store!.addUser({ name: "Dana", pin: "1234" });
+    // Ensure the user lands in slot 3 by filling slots 1 and 2 first if needed
+    // (addUser assigns slots sequentially, so user is at slot 1 unless prior users exist)
+    // We'll work with whatever slot was assigned.
+    const targetSlot = user.slot;
+
+    // Write a small locks.yaml with maxCodeSlots: 5 so verify only reads 5 slots
+    await writeFile(
+      join(dataDir, "locks.yaml"),
+      [
+        "zwaveJs: { url: " + server.url() + " }",
+        "homeAssistant: { url: http://ha.local, token: t, notify: { service: notify.x } }",
+        "verify: { intervalDays: 7, staggerMinutes: 0 }",
+        "locks:",
+        "  - { id: front, name: Front, nodeId: 7, maxCodeSlots: 5 }",
+      ].join("\n"),
+    );
+
+    // Mock: lock reports targetSlot as enabled with the matching pin "1234"
+    // All other slots are empty (status=0)
+    server.onCommand("node.poll_value", (cmd: RecordedCommand) => {
+      const valueId = cmd.args?.valueId as { property?: string; propertyKey?: number } | undefined;
+      if (valueId?.property === "userIdStatus" && valueId.propertyKey === targetSlot) {
+        return { value: 1 }; // enabled
+      }
+      if (valueId?.property === "userCode" && valueId.propertyKey === targetSlot) {
+        return { value: "1234" }; // matches desired PIN exactly — no drift
+      }
+      return { value: 0 }; // all other slots empty
+    });
+
+    // Rebuild the app so it picks up the new locks.yaml with maxCodeSlots: 5
+    await app.stop();
+    app = await buildApp({ dataDir, localSecret: "s" });
+    await app.start();
+    await app.waitForIdle();
+
+    // Wait for verify to complete (first-run verify happens on start for cache-less locks)
+    await new Promise<void>((resolve) => {
+      const check = () => {
+        const state = app!.cache!.getLock("front");
+        if (state?.lastVerifiedAt) resolve();
+        else setTimeout(check, 20);
+      };
+      setTimeout(check, 20);
+    });
+
+    const state = app!.cache!.getLock("front");
+    const slotState = state?.slots[String(targetSlot)];
+
+    // userId must be bound — the slot matched a desired user, so no write is needed
+    expect(slotState?.userId).toBe(user.id);
+    // Must not be flagged as drifted
+    expect(slotState?.drifted).toBeUndefined();
+    // pinFingerprint must be set
+    expect(slotState?.pinFingerprint).toBeDefined();
+  });
+
   it("appends a write event to events.jsonl after reconcile", async () => {
     app = await buildApp({ dataDir, localSecret: "s" });
     await app.start();

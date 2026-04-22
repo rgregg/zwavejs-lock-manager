@@ -206,6 +206,20 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
         }
       }
 
+      // Bind userId on slots where the lock's PIN matches a desired user.
+      // This prevents the reconciler from issuing redundant writes later
+      // because the diff uses userId as part of its "matches desired" check.
+      for (const s of slots) {
+        const slotNum = s.slot;
+        const slotState = mapped[String(slotNum)];
+        if (!slotState || slotState.status !== "enabled") continue;
+        if (driftSet.has(slotNum)) continue; // drifted slots don't get bound
+        const desiredUser = allUsers.find((u) => u.slot === slotNum && u.enabled);
+        if (desiredUser) {
+          slotState.userId = desiredUser.id;
+        }
+      }
+
       await cache.replaceLock(lock.id, mapped, driftedSlots);
       log.info({ lockId, drifted: driftedSlots.length }, "verify completed");
     } catch (err) {
