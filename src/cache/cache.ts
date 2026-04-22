@@ -50,12 +50,6 @@ export class LockStateCache {
     await this.persist();
   }
 
-  async markUnknown(lockId: string, slot: number): Promise<void> {
-    const lock = this.ensureLock(lockId);
-    lock.slots[String(slot)] = { status: "unknown", updatedAt: new Date().toISOString() };
-    await this.persist();
-  }
-
   async markReconcile(
     lockId: string,
     outcome: NonNullable<LockState["lastReconcileOutcome"]>,

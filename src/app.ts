@@ -142,19 +142,6 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
     }
   });
 
-  bus.on("keypadCodeChanged", async (evt) => {
-    const nodeId = Number(evt.lockId.replace(/^node-/, ""));
-    const lock = nodeIdToLock.get(nodeId);
-    if (!lock) return;
-    await cache.markUnknown(lock.id, evt.slot);
-    await eventLog.append({
-      ts: evt.ts,
-      type: "keypad_change",
-      lockId: lock.id,
-      slot: evt.slot,
-    });
-  });
-
   const doVerify = async (lockId: string): Promise<void> => {
     const lock = lockById.get(lockId);
     if (!lock) return;

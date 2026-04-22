@@ -186,19 +186,6 @@ export class ZWaveJSClient {
         });
       }
     }
-    if (event.event === "value updated" && typeof event.nodeId === "number") {
-      const args = event.args as Record<string, unknown> | undefined;
-      const commandClass = args?.commandClass;
-      const propertyKey = args?.propertyKey;
-      if (commandClass === 99 && typeof propertyKey === "number") {
-        // User Code CC
-        this.opts.bus.emit("keypadCodeChanged", {
-          ts: new Date().toISOString(),
-          lockId: `node-${event.nodeId}`,
-          slot: propertyKey,
-        });
-      }
-    }
   }
 
   private onClose(): void {

@@ -28,8 +28,6 @@ function describeEvent(e: LoggedEvent): string {
         : `Unknown slot ${e.slot} unlocked ${e.lockName}`;
     case "write":
       return `Write slot ${e.slot} on ${e.lockId}: ${e.outcome}`;
-    case "keypad_change":
-      return `Keypad change on ${e.lockId} slot ${e.slot}`;
     case "notification_failed":
       return `Notification failed for ${e.lockId} slot ${e.slot}: ${e.reason}`;
   }

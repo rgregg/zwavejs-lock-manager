@@ -16,13 +16,6 @@ export interface LoggedWrite {
   outcome: "ok" | "error";
 }
 
-export interface LoggedKeypadChange {
-  ts: string;
-  type: "keypad_change";
-  lockId: string;
-  slot: number;
-}
-
 export interface LoggedNotificationFailed {
   ts: string;
   type: "notification_failed";
@@ -34,5 +27,4 @@ export interface LoggedNotificationFailed {
 export type LoggedEvent =
   | LoggedUnlock
   | LoggedWrite
-  | LoggedKeypadChange
   | LoggedNotificationFailed;
