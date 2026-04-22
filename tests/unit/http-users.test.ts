@@ -73,4 +73,42 @@ describe("users routes", () => {
     });
     expect(called).toBe(1);
   });
+
+  it("POST /users/:id/edit updates name without requiring pin", async () => {
+    const u = await store.addUser({ name: "Alice", pin: "1111" });
+    const res = await app.inject({
+      method: "POST",
+      url: `/users/${u.id}/edit`,
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      payload: "name=Allison&pin=",
+    });
+    expect(res.statusCode).toBe(302);
+    expect(store.getUser(u.id)?.name).toBe("Allison");
+    expect(store.getUser(u.id)?.pin).toBe("1111"); // unchanged
+  });
+
+  it("POST /users/:id/edit updates pin when provided", async () => {
+    const u = await store.addUser({ name: "Alice", pin: "1111" });
+    await app.inject({
+      method: "POST",
+      url: `/users/${u.id}/edit`,
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      payload: "name=Alice&pin=5678",
+    });
+    expect(store.getUser(u.id)?.pin).toBe("5678");
+  });
+
+  it("POST /users/:id/edit triggers onChange", async () => {
+    let called = 0;
+    await app.close();
+    app = buildServer({ store, onUsersChanged: () => (called += 1) });
+    const u = await store.addUser({ name: "Alice", pin: "1111" });
+    await app.inject({
+      method: "POST",
+      url: `/users/${u.id}/edit`,
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      payload: "name=Bob&pin=",
+    });
+    expect(called).toBe(1);
+  });
 });

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Store } from "../../store/store.js";
+import type { UserPatch } from "../../store/types.js";
 import { renderUsersPage } from "../views/users.js";
 
 interface UsersDeps {
@@ -18,6 +19,22 @@ export function registerUsersRoutes(app: FastifyInstance, deps: UsersDeps): void
     deps.onChange();
     reply.redirect("/users");
   });
+
+  app.post<{ Params: { id: string }; Body: { name?: string; pin?: string; enabled?: string } }>(
+    "/users/:id/edit",
+    async (req, reply) => {
+      const user = deps.store.getUser(req.params.id);
+      if (!user) return reply.code(404).send("not found");
+      const patch: UserPatch = {};
+      if (req.body.name && req.body.name !== user.name) patch.name = req.body.name;
+      if (req.body.pin && req.body.pin !== "") patch.pin = req.body.pin;
+      if (Object.keys(patch).length > 0) {
+        await deps.store.updateUser(user.id, patch);
+        deps.onChange();
+      }
+      reply.redirect("/users");
+    },
+  );
 
   app.post<{ Params: { id: string } }>("/users/:id/toggle", async (req, reply) => {
     const user = deps.store.getUser(req.params.id);

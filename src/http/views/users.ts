@@ -5,20 +5,28 @@ export function renderUsersPage(users: readonly User[]): string {
   const rows = users
     .map(
       (u) => `
-    <tr>
-      <td>${u.slot}</td>
-      <td>${escapeHtml(u.name)}</td>
-      <td>${u.enabled ? "Enabled" : "Disabled"}</td>
-      <td>
-        <form class="inline" method="post" action="/users/${u.id}/toggle">
-          <button type="submit">${u.enabled ? "Disable" : "Enable"}</button>
+  <tr>
+    <td>${u.slot}</td>
+    <td>${escapeHtml(u.name)}</td>
+    <td>${u.enabled ? "Enabled" : "Disabled"}</td>
+    <td>
+      <details>
+        <summary>Edit</summary>
+        <form method="post" action="/users/${u.id}/edit" style="margin-top:0.5rem">
+          <label>Name <input name="name" value="${escapeHtml(u.name)}" required /></label>
+          <label>New PIN <input name="pin" pattern="[0-9]{4,10}" placeholder="Leave blank to keep current" /></label>
+          <button type="submit">Save</button>
         </form>
-        <form class="inline" method="post" action="/users/${u.id}/delete"
-              onsubmit="return confirm('Delete ${escapeHtml(u.name)}?');">
-          <button type="submit">Delete</button>
-        </form>
-      </td>
-    </tr>`,
+      </details>
+      <form class="inline" method="post" action="/users/${u.id}/toggle">
+        <button type="submit">${u.enabled ? "Disable" : "Enable"}</button>
+      </form>
+      <form class="inline" method="post" action="/users/${u.id}/delete"
+            onsubmit="return confirm('Delete ${escapeHtml(u.name)}?');">
+        <button type="submit">Delete</button>
+      </form>
+    </td>
+  </tr>`,
     )
     .join("");
   const body = `

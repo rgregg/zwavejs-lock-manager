@@ -21,6 +21,7 @@ export function layout(title: string, body: string): string {
     <a href="/locks">Locks</a>
     <a href="/events">Events</a>
   </nav>
+  <div hx-get="/status" hx-trigger="load, every 5s" hx-swap="innerHTML"></div>
   ${body}
 </body>
 </html>`;

@@ -14,6 +14,7 @@ import { HaNotifier } from "./notifier/ha-notifier.js";
 import { EventLog } from "./log/event-log.js";
 import { VerifyScheduler } from "./verify/scheduler.js";
 import { buildServer, buildErrorServer } from "./http/server.js";
+import { ConnectionStatusTracker } from "./http/status.js";
 import { createLogger } from "./util/logger.js";
 import type { Logger } from "pino";
 
@@ -63,6 +64,8 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
   await cache.load();
 
   const bus = new EventBus();
+  const tracker = new ConnectionStatusTracker();
+  bus.on("connection", (e) => tracker.set(e.source, e.status));
   const zwave = new ZWaveJSClient({ url: config.zwaveJs.url, bus });
   const notifier = new HaNotifier({
     url: config.homeAssistant.url,
@@ -120,6 +123,7 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
       lockName: lock.name,
       ...(user ? { userName: user.name } : { slot: evt.slot }),
     });
+    tracker.set("homeAssistant", res.ok ? "connected" : "disconnected");
     if (!res.ok) {
       await eventLog.append({
         ts: new Date().toISOString(),
@@ -204,6 +208,7 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
     locks: config.locks,
     eventLog,
     bus,
+    status: tracker,
     onUsersChanged: () => reconciler.scheduleReconcile(desired),
     onResync: () => reconciler.scheduleReconcile(desired),
     onVerify: (id) => void doVerify(id),

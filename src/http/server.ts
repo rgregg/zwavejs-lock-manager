@@ -5,11 +5,13 @@ import type { LockStateCache } from "../cache/cache.js";
 import type { LockConfig } from "../config/schema.js";
 import type { EventLog } from "../log/event-log.js";
 import type { EventBus } from "../events/bus.js";
+import type { ConnectionStatusTracker } from "./status.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerUsersRoutes } from "./routes/users.js";
 import { registerLocksRoutes } from "./routes/locks.js";
 import { registerEventsRoutes } from "./routes/events.js";
 import { renderConfigErrorPage } from "./views/config-error.js";
+import { renderStatusPartial } from "./views/status.js";
 
 export interface ServerDeps {
   store?: Store;
@@ -17,6 +19,7 @@ export interface ServerDeps {
   locks?: readonly LockConfig[];
   eventLog?: EventLog;
   bus?: EventBus;
+  status?: ConnectionStatusTracker;
   onUsersChanged?: () => void;
   onResync?: (lockId: string) => void;
   onVerify?: (lockId: string) => void;
@@ -44,6 +47,13 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   }
   if (deps.eventLog && deps.bus) {
     registerEventsRoutes(app, { eventLog: deps.eventLog, bus: deps.bus });
+  }
+  if (deps.status) {
+    const statusTracker = deps.status;
+    app.get("/status", (_req, reply) => {
+      reply.type("text/html");
+      return renderStatusPartial(statusTracker.get());
+    });
   }
   app.get("/", (_req, reply) => reply.redirect("/users"));
   return app;
