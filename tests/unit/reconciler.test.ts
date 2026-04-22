@@ -154,6 +154,46 @@ describe("Reconciler", () => {
     expect(order).toEqual([1, 2, 3]);
   });
 
+  it("invokes onWriteResult for each op with outcome", async () => {
+    const cache = await makeCache();
+    const { writer, calls } = makeWriter();
+    const results: Array<{ lockId: string; slot: number; outcome: "ok" | "error" }> = [];
+    const rec = new Reconciler({
+      cache,
+      writer,
+      locks: LOCKS,
+      secret: SECRET,
+      retries: 0,
+      debounceMs: 0,
+      onWriteResult: (e) => { results.push(e); },
+    });
+    await rec.reconcileAll([{ id: "u1", name: "A", pin: "1", slot: 1, enabled: true }]);
+    expect(calls).toHaveLength(2); // ensure writes happened
+    expect(results).toEqual([
+      { lockId: "front-door", slot: 1, outcome: "ok" },
+      { lockId: "back-door", slot: 1, outcome: "ok" },
+    ]);
+  });
+
+  it("invokes onWriteResult with outcome=error when retries exhausted", async () => {
+    const cache = await makeCache();
+    const { writer } = makeWriter({ "set-7-1": 1 });
+    const results: Array<{ outcome: "ok" | "error" }> = [];
+    const rec = new Reconciler({
+      cache,
+      writer,
+      locks: LOCKS,
+      secret: SECRET,
+      retries: 0,
+      debounceMs: 0,
+      retryDelayMs: 1,
+      onWriteResult: (e) => { results.push({ outcome: e.outcome }); },
+    });
+    await rec.reconcileAll([{ id: "u1", name: "A", pin: "1", slot: 1, enabled: true }]);
+    // front-door fails, back-door succeeds
+    expect(results).toEqual([{ outcome: "error" }, { outcome: "ok" }]);
+  });
+
   it("debounces rapid scheduleReconcile calls into one pass", async () => {
     const { writer, calls } = makeWriter();
     const rec = new Reconciler({

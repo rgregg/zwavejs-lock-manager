@@ -11,6 +11,7 @@ interface ReconcilerOptions {
   retries?: number;
   retryDelayMs?: number;
   debounceMs?: number;
+  onWriteResult?: (event: { lockId: string; slot: number; outcome: "ok" | "error" }) => void | Promise<void>;
 }
 
 type DesiredProvider = () => readonly DiffUser[];
@@ -92,11 +93,13 @@ export class Reconciler {
           await this.opts.writer.clearUserCode(lock.nodeId, op.slot);
           await this.opts.cache.markCleared(lock.id, op.slot);
         }
+        void Promise.resolve(this.opts.onWriteResult?.({ lockId: lock.id, slot: op.slot, outcome: "ok" })).catch(() => {});
         return true;
       } catch {
         if (attempt < retries) await new Promise((r) => setTimeout(r, delayMs * (attempt + 1)));
       }
     }
+    void Promise.resolve(this.opts.onWriteResult?.({ lockId: lock.id, slot: op.slot, outcome: "error" })).catch(() => {});
     return false;
   }
 }

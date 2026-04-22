@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { MockZwaveJsServer } from "../helpers/mock-zwavejs-server.js";
@@ -127,5 +127,19 @@ describe("app startup", () => {
           ?.propertyKey === driftedSlot,
     );
     expect(setCalls).toHaveLength(0);
+  });
+
+  it("appends a write event to events.jsonl after reconcile", async () => {
+    app = await buildApp({ dataDir, localSecret: "s" });
+    await app.start();
+    expect(app.store).toBeDefined();
+    await app.store!.addUser({ name: "Alice", pin: "1234" });
+    await app.waitForIdle();
+
+    const eventsPath = join(dataDir, "events.jsonl");
+    await new Promise((r) => setTimeout(r, 50)); // let the fire-and-forget append settle
+    const raw = await readFile(eventsPath, "utf8");
+    const lines = raw.trim().split("\n").map((l) => JSON.parse(l));
+    expect(lines.some((e) => e.type === "write" && e.outcome === "ok")).toBe(true);
   });
 });

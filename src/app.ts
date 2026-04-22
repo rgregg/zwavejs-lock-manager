@@ -86,6 +86,15 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
     locks: config.locks,
     secret: opts.localSecret,
     debounceMs: 100,
+    onWriteResult: async (evt) => {
+      await eventLog.append({
+        ts: new Date().toISOString(),
+        type: "write",
+        lockId: evt.lockId,
+        slot: evt.slot,
+        outcome: evt.outcome,
+      });
+    },
   });
 
   store.on("change", () => reconciler.scheduleReconcile(desired));
