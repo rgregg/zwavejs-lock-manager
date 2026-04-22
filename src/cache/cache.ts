@@ -77,9 +77,40 @@ export class LockStateCache {
     await this.persist();
   }
 
-  async replaceLock(lockId: string, slots: Record<string, SlotState>): Promise<void> {
+  async markDrifted(lockId: string, slot: number): Promise<void> {
+    const lock = this.ensureLock(lockId);
+    const existing = lock.slots[String(slot)];
+    if (!existing) return;
+    lock.slots[String(slot)] = { ...existing, drifted: true };
+    await this.persist();
+  }
+
+  async clearSlotDrift(lockId: string, slot: number): Promise<void> {
+    const lock = this.ensureLock(lockId);
+    const existing = lock.slots[String(slot)];
+    const base: typeof existing = existing ?? { status: "unknown", updatedAt: new Date().toISOString() };
+    // Rebuild without the drifted flag and reset to unknown so the next reconcile re-evaluates
+    const { userId, pinFingerprint } = base;
+    lock.slots[String(slot)] = {
+      status: "unknown",
+      updatedAt: new Date().toISOString(),
+      ...(userId !== undefined ? { userId } : {}),
+      ...(pinFingerprint !== undefined ? { pinFingerprint } : {}),
+    };
+    await this.persist();
+  }
+
+  async replaceLock(lockId: string, slots: Record<string, SlotState>, drifted?: number[]): Promise<void> {
     const lock = this.ensureLock(lockId);
     lock.slots = slots;
+    if (drifted && drifted.length > 0) {
+      for (const slot of drifted) {
+        const existing = lock.slots[String(slot)];
+        if (existing) {
+          lock.slots[String(slot)] = { ...existing, drifted: true };
+        }
+      }
+    }
     lock.lastVerifiedAt = new Date().toISOString();
     await this.persist();
   }

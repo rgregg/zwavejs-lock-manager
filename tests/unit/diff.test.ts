@@ -94,4 +94,15 @@ describe("computeDiff", () => {
     });
     expect(ops).toEqual([{ op: "set", slot: 3, pin: "1234", userId: "u1" }]);
   });
+
+  it("ignores drifted slots regardless of desired/cache mismatch", () => {
+    const ops = computeDiff({
+      users: [{ id: "u1", name: "Alice", pin: "1234", slot: 3, enabled: true }],
+      cache: {
+        "3": { status: "enabled", drifted: true, updatedAt: "" },
+      },
+      secret: SECRET,
+    });
+    expect(ops).toEqual([]);
+  });
 });

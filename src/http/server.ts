@@ -19,6 +19,7 @@ export interface ServerDeps {
   onUsersChanged?: () => void;
   onResync?: (lockId: string) => void;
   onVerify?: (lockId: string) => void;
+  onDriftClear?: (lockId: string) => void;
 }
 
 export function buildServer(deps: ServerDeps): FastifyInstance {
@@ -37,6 +38,7 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
       cache: deps.cache,
       onResync: deps.onResync ?? (() => undefined),
       onVerify: deps.onVerify ?? (() => undefined),
+      onDriftClear: deps.onDriftClear ?? (() => undefined),
     });
   }
   if (deps.eventLog && deps.bus) {

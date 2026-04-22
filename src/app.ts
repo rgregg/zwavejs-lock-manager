@@ -132,7 +132,34 @@ export async function buildApp(opts: BuildAppOptions): Promise<RunningApp> {
             : {}),
         };
       }
-      await cache.replaceLock(lock.id, mapped);
+
+      // Per-slot drift detection: compare what's on the lock against what's desired.
+      // Slots that differ are flagged for human review — NOT auto-healed.
+      const driftedSlots: number[] = [];
+      const allUsers = store.listUsers();
+      for (const s of slots) {
+        const slotNum = s.slot;
+        const desiredUser = allUsers.find((u) => u.slot === slotNum);
+        let isDrifted = false;
+        if (desiredUser) {
+          if (desiredUser.enabled) {
+            const desiredFp = fingerprintPin(opts.localSecret, desiredUser.pin);
+            isDrifted =
+              mapped[String(slotNum)]?.status !== "enabled" ||
+              mapped[String(slotNum)]?.pinFingerprint !== desiredFp;
+          } else {
+            // User exists but disabled: lock should be empty for this slot
+            isDrifted = mapped[String(slotNum)]?.status === "enabled";
+          }
+        } else {
+          // No desired user for this slot: lock should be empty
+          isDrifted = mapped[String(slotNum)]?.status === "enabled";
+        }
+        if (isDrifted) driftedSlots.push(slotNum);
+      }
+
+      await cache.replaceLock(lock.id, mapped, driftedSlots);
+      log.info({ lockId, drifted: driftedSlots.length }, "verify completed");
     } catch (err) {
       log.error({ err, lockId }, "verify failed");
     }
@@ -153,6 +180,18 @@ export async function buildApp(opts: BuildAppOptions): Promise<RunningApp> {
     onUsersChanged: () => reconciler.scheduleReconcile(desired),
     onResync: () => reconciler.scheduleReconcile(desired),
     onVerify: (id) => void doVerify(id),
+    onDriftClear: (lockId) => {
+      const lock = lockById.get(lockId);
+      if (!lock) return;
+      const state = cache.getLock(lockId);
+      if (!state) return;
+      for (const slotKey of Object.keys(state.slots)) {
+        if (state.slots[slotKey]?.drifted) {
+          void cache.clearSlotDrift(lockId, Number(slotKey));
+        }
+      }
+      reconciler.scheduleReconcile(desired);
+    },
   });
 
   let listening = false;

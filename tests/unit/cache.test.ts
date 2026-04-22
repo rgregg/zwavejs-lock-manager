@@ -72,4 +72,43 @@ describe("LockStateCache", () => {
     await cache.dropLock("old");
     expect(cache.getLock("old")).toBeUndefined();
   });
+
+  it("markDrifted sets drifted: true on an existing slot", async () => {
+    const { cache } = await makeCache();
+    await cache.markWrite("front-door", 3, { userId: "u1", pinFingerprint: "sha256:abc" });
+    await cache.markDrifted("front-door", 3);
+    const slot = cache.getLock("front-door")?.slots["3"];
+    expect(slot?.drifted).toBe(true);
+    // original fields should be preserved
+    expect(slot?.status).toBe("enabled");
+    expect(slot?.userId).toBe("u1");
+  });
+
+  it("markDrifted is a no-op for a slot that does not exist", async () => {
+    const { cache } = await makeCache();
+    // should not throw and should not create a slot
+    await cache.markDrifted("front-door", 99);
+    expect(cache.getLock("front-door")?.slots["99"]).toBeUndefined();
+  });
+
+  it("clearSlotDrift resets slot to unknown and removes drifted flag", async () => {
+    const { cache } = await makeCache();
+    await cache.markWrite("front-door", 3, { userId: "u1", pinFingerprint: "sha256:abc" });
+    await cache.markDrifted("front-door", 3);
+    await cache.clearSlotDrift("front-door", 3);
+    const slot = cache.getLock("front-door")?.slots["3"];
+    expect(slot?.status).toBe("unknown");
+    expect(slot?.drifted).toBeUndefined();
+  });
+
+  it("replaceLock with drifted array marks specified slots as drifted", async () => {
+    const { cache } = await makeCache();
+    const now = new Date().toISOString();
+    await cache.replaceLock("front-door", {
+      "1": { status: "enabled", userId: "u1", pinFingerprint: "sha256:a", updatedAt: now },
+      "2": { status: "enabled", userId: "u2", pinFingerprint: "sha256:b", updatedAt: now },
+    }, [2]);
+    expect(cache.getLock("front-door")?.slots["1"]?.drifted).toBeUndefined();
+    expect(cache.getLock("front-door")?.slots["2"]?.drifted).toBe(true);
+  });
 });

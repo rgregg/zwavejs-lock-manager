@@ -10,9 +10,22 @@ export function renderLocksPage(
     .map((lock) => {
       const st = cache(lock.id);
       const outcome = st?.lastReconcileOutcome ?? "unknown";
+      const driftedSlots = st
+        ? Object.values(st.slots).filter((s) => s?.drifted).length
+        : 0;
+      const driftBadge =
+        driftedSlots > 0
+          ? `<span class="drift-badge">&#9888; Drift: ${driftedSlots} slot(s)</span>`
+          : "";
+      const driftClearForm =
+        driftedSlots > 0
+          ? `<form class="inline" method="post" action="/locks/${lock.id}/drift/clear">
+            <button type="submit">Accept desired (force resync)</button>
+          </form>`
+          : "";
       return `
       <tr>
-        <td>${escapeHtml(lock.name)}</td>
+        <td>${escapeHtml(lock.name)}${driftBadge}</td>
         <td>node ${lock.nodeId}</td>
         <td class="status-${outcome}">${outcome}</td>
         <td>${escapeHtml(st?.lastReconcileAt ?? "never")}</td>
@@ -25,6 +38,7 @@ export function renderLocksPage(
                 onsubmit="return confirm('Verify will wake the lock. Proceed?');">
             <button type="submit">Verify now</button>
           </form>
+          ${driftClearForm}
         </td>
       </tr>`;
     })

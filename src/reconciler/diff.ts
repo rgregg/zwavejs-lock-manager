@@ -29,6 +29,9 @@ export function computeDiff(input: DiffInput): Op[] {
     const current = input.cache[slotKey];
     const wantEnabled = user.enabled;
 
+    // Skip drifted slots — they are flagged for human review, not auto-healed
+    if (current?.drifted) continue;
+
     if (wantEnabled) {
       const expectedFp = fingerprintPin(input.secret, user.pin);
       const matches =
@@ -48,6 +51,8 @@ export function computeDiff(input: DiffInput): Op[] {
   for (const [slotKey, slot] of Object.entries(input.cache)) {
     const slotNum = Number(slotKey);
     if (desiredSlots.has(slotNum)) continue;
+    // Skip drifted slots — they are flagged for human review, not auto-healed
+    if (slot.drifted) continue;
     if (slot.status === "enabled") {
       ops.push({ op: "clear", slot: slotNum });
     }

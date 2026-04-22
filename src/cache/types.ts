@@ -5,6 +5,7 @@ export interface SlotState {
   userId?: string;
   pinFingerprint?: string;
   updatedAt: string;
+  drifted?: true; // when true, reconciler skips this slot
 }
 
 export interface LockState {

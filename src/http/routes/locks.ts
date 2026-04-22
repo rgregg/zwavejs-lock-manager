@@ -8,6 +8,7 @@ interface LocksDeps {
   cache: LockStateCache;
   onResync: (lockId: string) => void;
   onVerify: (lockId: string) => void;
+  onDriftClear: (lockId: string) => void;
 }
 
 export function registerLocksRoutes(app: FastifyInstance, deps: LocksDeps): void {
@@ -27,6 +28,12 @@ export function registerLocksRoutes(app: FastifyInstance, deps: LocksDeps): void
   app.post<{ Params: { id: string } }>("/locks/:id/verify", async (req, reply) => {
     if (!byId.has(req.params.id)) return reply.code(404).send("not found");
     deps.onVerify(req.params.id);
+    reply.redirect("/locks");
+  });
+
+  app.post<{ Params: { id: string } }>("/locks/:id/drift/clear", async (req, reply) => {
+    if (!byId.has(req.params.id)) return reply.code(404).send("not found");
+    deps.onDriftClear(req.params.id);
     reply.redirect("/locks");
   });
 }
