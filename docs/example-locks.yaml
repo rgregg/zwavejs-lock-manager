@@ -11,6 +11,10 @@ verify:
   intervalDays: 7
   staggerMinutes: 60
 
+# Set to `true` during first deployment to validate the handshake and
+# read paths without issuing any writes to the locks.
+readOnly: false
+
 locks:
   - id: front-door
     name: Front Door

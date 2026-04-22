@@ -5,13 +5,14 @@ import { renderUsersPage } from "../views/users.js";
 
 interface UsersDeps {
   store: Store;
+  readOnly?: boolean;
   onChange: () => void;
 }
 
 export function registerUsersRoutes(app: FastifyInstance, deps: UsersDeps): void {
   app.get("/users", async (_req, reply) => {
     reply.type("text/html");
-    return renderUsersPage(deps.store.listUsers());
+    return renderUsersPage(deps.store.listUsers(), deps.readOnly !== undefined ? { readOnly: deps.readOnly } : undefined);
   });
 
   app.post<{ Body: { name: string; pin: string } }>("/users", async (req, reply) => {

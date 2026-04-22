@@ -6,6 +6,8 @@ See the design spec: `docs/superpowers/specs/2026-04-21-zwave-lock-sync-design.m
 
 ## Quickstart
 
+> For a first deployment against real hardware, follow `docs/deployment-guide.md` — it walks you through a read-only validation pass before enabling writes.
+
 1. Copy `docs/example-locks.yaml` to `data/locks.yaml` and edit `zwaveJs.url`, your HA URL, and your locks.
 2. Set env vars:
    - `HA_TOKEN` — long-lived HA access token

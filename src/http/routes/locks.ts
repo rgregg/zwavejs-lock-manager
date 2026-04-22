@@ -6,6 +6,7 @@ import { renderLocksPage } from "../views/locks.js";
 interface LocksDeps {
   locks: readonly LockConfig[];
   cache: LockStateCache;
+  readOnly?: boolean;
   onResync: (lockId: string) => void;
   onVerify: (lockId: string) => void;
   onDriftClear: (lockId: string) => void;
@@ -16,7 +17,7 @@ export function registerLocksRoutes(app: FastifyInstance, deps: LocksDeps): void
 
   app.get("/locks", async (_req, reply) => {
     reply.type("text/html");
-    return renderLocksPage(deps.locks, (id) => deps.cache.getLock(id));
+    return renderLocksPage(deps.locks, (id) => deps.cache.getLock(id), deps.readOnly !== undefined ? { readOnly: deps.readOnly } : undefined);
   });
 
   app.post<{ Params: { id: string } }>("/locks/:id/resync", async (req, reply) => {

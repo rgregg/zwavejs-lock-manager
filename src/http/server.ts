@@ -20,6 +20,7 @@ export interface ServerDeps {
   eventLog?: EventLog;
   bus?: EventBus;
   status?: ConnectionStatusTracker;
+  readOnly?: boolean;
   onUsersChanged?: () => void;
   onResync?: (lockId: string) => void;
   onVerify?: (lockId: string) => void;
@@ -33,6 +34,7 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   if (deps.store) {
     registerUsersRoutes(app, {
       store: deps.store,
+      ...(deps.readOnly !== undefined ? { readOnly: deps.readOnly } : {}),
       onChange: deps.onUsersChanged ?? (() => undefined),
     });
   }
@@ -40,13 +42,18 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
     registerLocksRoutes(app, {
       locks: deps.locks,
       cache: deps.cache,
+      ...(deps.readOnly !== undefined ? { readOnly: deps.readOnly } : {}),
       onResync: deps.onResync ?? (() => undefined),
       onVerify: deps.onVerify ?? (() => undefined),
       onDriftClear: deps.onDriftClear ?? (() => undefined),
     });
   }
   if (deps.eventLog && deps.bus) {
-    registerEventsRoutes(app, { eventLog: deps.eventLog, bus: deps.bus });
+    registerEventsRoutes(app, {
+      eventLog: deps.eventLog,
+      bus: deps.bus,
+      ...(deps.readOnly !== undefined ? { readOnly: deps.readOnly } : {}),
+    });
   }
   if (deps.status) {
     const statusTracker = deps.status;

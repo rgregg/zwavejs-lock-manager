@@ -1,7 +1,7 @@
 import type { LoggedEvent } from "../../log/types.js";
 import { escapeHtml, layout } from "./layout.js";
 
-export function renderEventsPage(events: readonly LoggedEvent[]): string {
+export function renderEventsPage(events: readonly LoggedEvent[], opts?: { readOnly?: boolean }): string {
   const rows = events
     .slice()
     .reverse()
@@ -17,7 +17,7 @@ export function renderEventsPage(events: readonly LoggedEvent[]): string {
     <thead><tr><th>Time</th><th>Type</th><th>Details</th></tr></thead>
     <tbody>${rows || '<tr><td colspan="3">No events yet.</td></tr>'}</tbody>
   </table>`;
-  return layout("Events", body);
+  return layout("Events", body, opts);
 }
 
 function describeEvent(e: LoggedEvent): string {

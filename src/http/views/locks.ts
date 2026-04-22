@@ -5,6 +5,7 @@ import { escapeHtml, layout } from "./layout.js";
 export function renderLocksPage(
   locks: readonly LockConfig[],
   cache: (id: string) => LockState | undefined,
+  opts?: { readOnly?: boolean },
 ): string {
   const rows = locks
     .map((lock) => {
@@ -49,5 +50,5 @@ export function renderLocksPage(
     <thead><tr><th>Name</th><th>Node</th><th>Last outcome</th><th>Last reconcile</th><th>Last verify</th><th>Actions</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
-  return layout("Locks", body);
+  return layout("Locks", body, opts);
 }

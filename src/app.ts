@@ -16,6 +16,7 @@ import { VerifyScheduler } from "./verify/scheduler.js";
 import { buildServer, buildErrorServer } from "./http/server.js";
 import { ConnectionStatusTracker } from "./http/status.js";
 import { createLogger } from "./util/logger.js";
+import { createReadOnlyWriter } from "./zwave/readonly-writer.js";
 import type { Logger } from "pino";
 
 export interface BuildAppOptions {
@@ -29,6 +30,7 @@ export interface RunningApp {
   store?: Store;
   cache?: LockStateCache;
   config?: LocksConfig;
+  readOnly?: boolean;
   waitForIdle(): Promise<void>;
   stop(): Promise<void>;
   start(): Promise<void>;
@@ -83,9 +85,14 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
       enabled: u.enabled,
     }));
 
+  const writer = config.readOnly ? createReadOnlyWriter(log) : zwave;
+  if (config.readOnly) {
+    log.warn({}, "READ ONLY mode — no writes will be issued to any lock");
+  }
+
   const reconciler = new Reconciler({
     cache,
-    writer: zwave,
+    writer,
     locks: config.locks,
     secret: opts.localSecret,
     debounceMs: 100,
@@ -209,6 +216,7 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
     eventLog,
     bus,
     status: tracker,
+    readOnly: config.readOnly,
     onUsersChanged: () => reconciler.scheduleReconcile(desired),
     onResync: (lockId) => {
       void reconciler.reconcileLockOnly(lockId, desired());
@@ -253,7 +261,7 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
     await reconciler.drain();
   };
 
-  return { store, cache, server, config, start, stop, waitForIdle };
+  return { store, cache, server, config, readOnly: config.readOnly, start, stop, waitForIdle };
 }
 
 function buildErrorModeApp(opts: { port?: number; message: string }): RunningApp {
@@ -275,5 +283,5 @@ function buildErrorModeApp(opts: { port?: number; message: string }): RunningApp
     // no-op in error mode
   };
 
-  return { server, start, stop, waitForIdle };
+  return { server, readOnly: false, start, stop, waitForIdle };
 }

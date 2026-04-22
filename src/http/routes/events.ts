@@ -6,13 +6,14 @@ import { renderEventsPage } from "../views/events.js";
 interface EventsDeps {
   eventLog: EventLog;
   bus: EventBus;
+  readOnly?: boolean;
 }
 
 export function registerEventsRoutes(app: FastifyInstance, deps: EventsDeps): void {
   app.get("/events", async (_req, reply) => {
     const tail = await deps.eventLog.tail(200);
     reply.type("text/html");
-    return renderEventsPage(tail);
+    return renderEventsPage(tail, deps.readOnly !== undefined ? { readOnly: deps.readOnly } : undefined);
   });
 
   app.get("/events/stream", (req, reply) => {

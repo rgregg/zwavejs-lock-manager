@@ -24,6 +24,7 @@ export const LocksConfigSchema = z.object({
       staggerMinutes: z.number().int().nonnegative().default(60),
     })
     .default({ intervalDays: 7, staggerMinutes: 60 }),
+  readOnly: z.boolean().default(false),
   locks: z.array(LockConfigSchema),
 });
 

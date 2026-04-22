@@ -1,4 +1,7 @@
-export function layout(title: string, body: string): string {
+export function layout(title: string, body: string, opts?: { readOnly?: boolean }): string {
+  const banner = opts?.readOnly
+    ? `<div style="background:#fe7;border:1px solid #c90;padding:0.5rem;margin:0 0 0.5rem">🔒 <strong>READ ONLY mode</strong> — no codes will be written to your locks.</div>`
+    : "";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,6 +24,7 @@ export function layout(title: string, body: string): string {
     <a href="/locks">Locks</a>
     <a href="/events">Events</a>
   </nav>
+  ${banner}
   <div hx-get="/status" hx-trigger="load, every 5s" hx-swap="innerHTML"></div>
   ${body}
 </body>

@@ -1,7 +1,7 @@
 import type { User } from "../../store/types.js";
 import { escapeHtml, layout } from "./layout.js";
 
-export function renderUsersPage(users: readonly User[]): string {
+export function renderUsersPage(users: readonly User[], opts?: { readOnly?: boolean }): string {
   const rows = users
     .map(
       (u) => `
@@ -40,5 +40,5 @@ export function renderUsersPage(users: readonly User[]): string {
     <thead><tr><th>Slot</th><th>Name</th><th>Status</th><th>Actions</th></tr></thead>
     <tbody>${rows || '<tr><td colspan="4">No users yet.</td></tr>'}</tbody>
   </table>`;
-  return layout("Users", body);
+  return layout("Users", body, opts);
 }
