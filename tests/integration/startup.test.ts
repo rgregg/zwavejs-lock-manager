@@ -16,7 +16,7 @@ describe("app startup", () => {
     server = new MockZwaveJsServer();
     await server.start();
     server.onCommand("node.set_value", () => null);
-    server.onCommand("node.get_value", () => 0);
+    server.onCommand("node.poll_value", () => ({ value: 0 }));
 
     dataDir = await mkdtemp(join(tmpdir(), "app-"));
     await writeFile(
@@ -79,15 +79,15 @@ describe("app startup", () => {
     // Mock: for verify (getAllUserCodes), the lock reports slot driftedSlot as ENABLED
     // with a DIFFERENT pin (keypad-set "9999") — this should be detected as drift.
     // All other slots are empty (status=0).
-    server.onCommand("node.get_value", (cmd: RecordedCommand) => {
+    server.onCommand("node.poll_value", (cmd: RecordedCommand) => {
       const valueId = cmd.args?.valueId as { property?: string; propertyKey?: number } | undefined;
       if (valueId?.property === "userIdStatus" && valueId.propertyKey === driftedSlot) {
-        return 1; // enabled
+        return { value: 1 }; // enabled
       }
       if (valueId?.property === "userCode" && valueId.propertyKey === driftedSlot) {
-        return "9999"; // keypad-set pin, differs from desired "5678"
+        return { value: "9999" }; // keypad-set pin, differs from desired "5678"
       }
-      return 0; // all other slots empty
+      return { value: 0 }; // all other slots empty
     });
 
     await app.start();
@@ -113,7 +113,7 @@ describe("app startup", () => {
     server.commands.length = 0;
 
     // Reset mock back to default (all empty)
-    server.onCommand("node.get_value", () => 0);
+    server.onCommand("node.poll_value", () => ({ value: 0 }));
 
     // Add a second user — this triggers a reconcile, but the drifted slot should NOT be written
     await app.store!.addUser({ name: "Carol", pin: "1111" });

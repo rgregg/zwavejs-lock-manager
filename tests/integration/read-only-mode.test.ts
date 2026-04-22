@@ -13,7 +13,7 @@ describe("read-only mode", () => {
   beforeEach(async () => {
     server = new MockZwaveJsServer();
     await server.start();
-    server.onCommand("node.get_value", () => 0);
+    server.onCommand("node.poll_value", () => ({ value: 0 }));
     dataDir = await mkdtemp(join(tmpdir(), "ro-"));
     await writeFile(
       join(dataDir, "locks.yaml"),

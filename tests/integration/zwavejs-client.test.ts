@@ -79,6 +79,44 @@ describe("ZWaveJSClient", () => {
     });
   });
 
+  it("getAllUserCodes reads live from lock via node.poll_value", async () => {
+    await client.start();
+    server.onCommand("node.poll_value", (cmd) => {
+      const valueId = cmd.args?.valueId as { property?: string; propertyKey?: number } | undefined;
+      const slot = valueId?.propertyKey;
+      if (slot === 3 && valueId?.property === "userIdStatus") return { value: 1 };
+      if (slot === 3 && valueId?.property === "userCode") return { value: "9999" };
+      if (slot === 4 && valueId?.property === "userIdStatus") return { value: 0 };
+      return null;
+    });
+
+    const slots = await client.getAllUserCodes(7, 5);
+
+    expect(slots).toHaveLength(5);
+    expect(slots.find((s) => s.slot === 3)).toEqual({ slot: 3, status: "enabled", pin: "9999" });
+    expect(slots.find((s) => s.slot === 4)).toEqual({ slot: 4, status: "empty" });
+    expect(slots.find((s) => s.slot === 1)).toEqual({ slot: 1, status: "unknown" });
+    expect(slots.find((s) => s.slot === 2)).toEqual({ slot: 2, status: "unknown" });
+    expect(slots.find((s) => s.slot === 5)).toEqual({ slot: 5, status: "unknown" });
+
+    // Slots 1,2,5 each get 1 poll_value (status only, since null→unknown).
+    // Slot 3 gets 2 (status + code). Slot 4 gets 1 (status=0, skip code). Total = 6.
+    const pollCommands = server.commands.filter((c) => c.command === "node.poll_value");
+    expect(pollCommands).toHaveLength(6);
+    // All commands target the right node, CC, and property shape
+    for (const cmd of pollCommands) {
+      expect(cmd.args).toMatchObject({
+        nodeId: 7,
+        valueId: { commandClass: 99 },
+      });
+    }
+    // Slot 3 has both userIdStatus and userCode polls
+    const slot3Polls = pollCommands.filter(
+      (c) => (c.args?.valueId as { propertyKey?: number } | undefined)?.propertyKey === 3,
+    );
+    expect(slot3Polls).toHaveLength(2);
+  });
+
   it("unlock notification event fires on the bus", async () => {
     const seen: Array<{ lockId: string; slot: number }> = [];
     bus.on("unlock", (e) => seen.push({ lockId: e.lockId, slot: e.slot }));

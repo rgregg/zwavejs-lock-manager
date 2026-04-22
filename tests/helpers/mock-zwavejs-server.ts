@@ -118,6 +118,31 @@ export class MockZwaveJsServer {
             return;
           }
 
+          // In ready state: validate node.poll_value shape
+          if (msg.command === "node.poll_value") {
+            const valueId = msg.valueId as
+              | { commandClass?: unknown; property?: unknown; propertyKey?: unknown }
+              | undefined;
+            const validProperty =
+              valueId?.property === "userCode" || valueId?.property === "userIdStatus";
+            if (
+              !valueId ||
+              valueId.commandClass !== 99 ||
+              !validProperty ||
+              typeof valueId.propertyKey !== "number"
+            ) {
+              socket.send(
+                JSON.stringify({
+                  type: "result",
+                  messageId: msg.messageId,
+                  success: false,
+                  errorCode: "value_not_found",
+                }),
+              );
+              return;
+            }
+          }
+
           // In ready state: validate node.set_value shape
           if (msg.command === "node.set_value") {
             const valueId = msg.valueId as

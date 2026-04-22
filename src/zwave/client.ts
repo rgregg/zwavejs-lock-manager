@@ -257,19 +257,24 @@ export class ZWaveJSClient {
   async getAllUserCodes(nodeId: number, maxSlots: number): Promise<UserCodeSlot[]> {
     const out: UserCodeSlot[] = [];
     for (let slot = 1; slot <= maxSlots; slot++) {
-      const status = await this.call<number>("node.get_value", {
-        nodeId,
-        valueId: { commandClass: 99, property: "userIdStatus", propertyKey: slot },
-      }).catch(() => undefined);
-      if (status === 1) {
-        const pin = await this.call<string>("node.get_value", {
+      try {
+        const statusResult = await this.call<{ value?: number } | null>("node.poll_value", {
           nodeId,
-          valueId: { commandClass: 99, property: "userCode", propertyKey: slot },
-        }).catch(() => "");
-        out.push({ slot, status: "enabled", pin });
-      } else if (status === 0) {
-        out.push({ slot, status: "empty" });
-      } else {
+          valueId: { commandClass: 99, property: "userIdStatus", propertyKey: slot },
+        });
+        const status = statusResult?.value;
+        if (status === 1) {
+          const codeResult = await this.call<{ value?: string } | null>("node.poll_value", {
+            nodeId,
+            valueId: { commandClass: 99, property: "userCode", propertyKey: slot },
+          });
+          out.push({ slot, status: "enabled", pin: codeResult?.value ?? "" });
+        } else if (status === 0) {
+          out.push({ slot, status: "empty" });
+        } else {
+          out.push({ slot, status: "unknown" });
+        }
+      } catch {
         out.push({ slot, status: "unknown" });
       }
     }
