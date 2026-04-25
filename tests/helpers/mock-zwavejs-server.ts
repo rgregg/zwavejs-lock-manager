@@ -205,6 +205,11 @@ export class MockZwaveJsServer {
     }
   }
 
+  /** Terminate all active WebSocket connections without closing the server. */
+  disconnectAll(): void {
+    for (const s of this.sockets.keys()) s.terminate();
+  }
+
   async stop(): Promise<void> {
     for (const s of this.sockets.keys()) s.terminate();
     await new Promise<void>((r) => this.wss.close(() => r()));

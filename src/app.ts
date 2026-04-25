@@ -143,11 +143,26 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
     }
   });
 
+  const verifyQueues = new Map<string, Promise<void>>();
+
+  const queueVerify = async (lockId: string): Promise<void> => {
+    const prior = verifyQueues.get(lockId) ?? Promise.resolve();
+    const next = prior.then(() => doVerify(lockId));
+    verifyQueues.set(lockId, next.catch(() => undefined));
+    await next;
+  };
+
   const doVerify = async (lockId: string): Promise<void> => {
     const lock = lockById.get(lockId);
     if (!lock) return;
+    let slots;
     try {
-      const slots = await zwave.getAllUserCodes(lock.nodeId, lock.maxCodeSlots);
+      slots = await zwave.getAllUserCodes(lock.nodeId, lock.maxCodeSlots);
+    } catch (err) {
+      log.warn({ err, lockId }, "verify aborted (connection lost mid-read)");
+      return;
+    }
+    try {
       const mapped: Record<string, SlotState> = {};
       for (const s of slots) {
         mapped[String(s.slot)] = {
@@ -218,7 +233,7 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
   const verifyScheduler = new VerifyScheduler({
     intervalMs: config.verify.intervalDays * 24 * 60 * 60 * 1000,
     staggerMs: config.verify.staggerMinutes * 60 * 1000,
-    onVerify: doVerify,
+    onVerify: queueVerify,
   });
 
   const server = buildServer({
@@ -233,7 +248,7 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
     onResync: (lockId) => {
       void reconciler.reconcileLockOnly(lockId, desired());
     },
-    onVerify: (id) => void doVerify(id),
+    onVerify: (id) => void queueVerify(id),
     onDriftClear: (lockId) => {
       const lock = lockById.get(lockId);
       if (!lock) return;
@@ -254,9 +269,9 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
     await zwave.start();
     // First-run verify for any lock without a cache entry
     const firstRun = config.locks.filter((l) => !cache.getLock(l.id)).map((l) => l.id);
-    for (const id of firstRun) await doVerify(id);
+    for (const id of firstRun) await queueVerify(id);
     reconciler.scheduleReconcile(desired);
-    verifyScheduler.schedule(config.locks.map((l) => l.id));
+    verifyScheduler.schedule(config.locks.map((l) => l.id), { skipInitial: true });
     if (opts.httpPort !== undefined) {
       await server.listen({ port: opts.httpPort, host: "0.0.0.0" });
       listening = true;

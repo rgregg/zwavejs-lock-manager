@@ -125,4 +125,25 @@ describe("ZWaveJSClient", () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(seen).toEqual([{ lockId: "node-7", slot: 3 }]);
   });
+
+  it("getAllUserCodes rejects with 'connection closed' when server disconnects mid-read", async () => {
+    await client.start();
+
+    let pollCount = 0;
+    server.onCommand("node.poll_value", (cmd) => {
+      const valueId = cmd.args?.valueId as { property?: string; propertyKey?: number } | undefined;
+      // Only count userIdStatus polls to track slot progress
+      if (valueId?.property === "userIdStatus") {
+        pollCount += 1;
+        if (pollCount === 5) {
+          // Disconnect after responding to slot 5's status poll
+          // (response is sent first by the mock, then we disconnect)
+          setImmediate(() => server.disconnectAll());
+        }
+      }
+      return { value: 0 };
+    });
+
+    await expect(client.getAllUserCodes(7, 30)).rejects.toThrow("connection closed");
+  });
 });

@@ -261,7 +261,8 @@ export class ZWaveJSClient {
         } else {
           out.push({ slot, status: "unknown" });
         }
-      } catch {
+      } catch (err) {
+        if ((err as Error).message === "connection closed") throw err;
         out.push({ slot, status: "unknown" });
       }
     }
