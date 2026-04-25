@@ -16,7 +16,13 @@ export function registerUsersRoutes(app: FastifyInstance, deps: UsersDeps): void
   });
 
   app.post<{ Body: { name: string; pin: string } }>("/users", async (req, reply) => {
-    await deps.store.addUser({ name: req.body.name, pin: req.body.pin });
+    if (!/^[0-9]{4,10}$/.test(req.body.pin)) {
+      return reply.code(400).send("invalid pin");
+    }
+    if (!req.body.name?.trim()) {
+      return reply.code(400).send("name required");
+    }
+    await deps.store.addUser({ name: req.body.name.trim(), pin: req.body.pin });
     deps.onChange();
     reply.redirect("/users");
   });

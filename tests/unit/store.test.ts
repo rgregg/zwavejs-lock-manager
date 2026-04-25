@@ -89,8 +89,8 @@ describe("Store", () => {
     const dir = await mkdtemp(join(tmpdir(), "store-tiny-"));
     const tiny = new Store({ path: join(dir, "users.json"), maxSlots: 1 });
     await tiny.load();
-    await tiny.addUser({ name: "A", pin: "1" });
-    await expect(tiny.addUser({ name: "B", pin: "2" })).rejects.toThrow(/no slot/i);
+    await tiny.addUser({ name: "A", pin: "1111" });
+    await expect(tiny.addUser({ name: "B", pin: "2222" })).rejects.toThrow(/no slot/i);
   });
 
   it("addUser accepts an explicit slot", async () => {
@@ -102,15 +102,15 @@ describe("Store", () => {
   it("addUser rejects an out-of-range slot", async () => {
     const { store } = await makeStore();
     await expect(
-      store.addUser({ name: "X", pin: "1", slot: 99 }),
+      store.addUser({ name: "X", pin: "1111", slot: 99 }),
     ).rejects.toThrow(/range/i);
   });
 
   it("addUser rejects a slot that's already taken", async () => {
     const { store } = await makeStore();
-    await store.addUser({ name: "A", pin: "1", slot: 3 });
+    await store.addUser({ name: "A", pin: "1111", slot: 3 });
     await expect(
-      store.addUser({ name: "B", pin: "2", slot: 3 }),
+      store.addUser({ name: "B", pin: "2222", slot: 3 }),
     ).rejects.toThrow(/taken/i);
   });
 });

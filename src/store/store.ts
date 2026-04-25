@@ -10,6 +10,14 @@ export type StoreChangeEvent =
   | { type: "user.updated"; user: User; previous: User }
   | { type: "user.deleted"; user: User };
 
+const PIN_PATTERN = /^[0-9]{4,10}$/;
+
+function validatePin(pin: string): void {
+  if (!PIN_PATTERN.test(pin)) {
+    throw new Error(`Invalid PIN: must be 4-10 digits`);
+  }
+}
+
 interface StoreOptions {
   path: string;
   maxSlots: number;
@@ -44,6 +52,7 @@ export class Store extends EventEmitter {
   }
 
   async addUser(input: UserInput): Promise<User> {
+    validatePin(input.pin);
     const taken = new Set(this.users.map((u) => u.slot));
     let slot: number;
     if (input.slot !== undefined) {
@@ -75,6 +84,7 @@ export class Store extends EventEmitter {
   }
 
   async updateUser(id: string, patch: UserPatch): Promise<User> {
+    if (patch.pin !== undefined) validatePin(patch.pin);
     const idx = this.users.findIndex((u) => u.id === id);
     if (idx < 0) throw new Error(`Unknown user: ${id}`);
     const previous = this.users[idx]!;

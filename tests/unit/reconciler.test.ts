@@ -147,9 +147,9 @@ describe("Reconciler", () => {
       debounceMs: 0,
     });
     await rec.reconcileAll([
-      { id: "u1", name: "A", pin: "1", slot: 1, enabled: true },
-      { id: "u2", name: "B", pin: "2", slot: 2, enabled: true },
-      { id: "u3", name: "C", pin: "3", slot: 3, enabled: true },
+      { id: "u1", name: "A", pin: "1111", slot: 1, enabled: true },
+      { id: "u2", name: "B", pin: "2222", slot: 2, enabled: true },
+      { id: "u3", name: "C", pin: "3333", slot: 3, enabled: true },
     ]);
     expect(order).toEqual([1, 2, 3]);
   });
@@ -167,7 +167,7 @@ describe("Reconciler", () => {
       debounceMs: 0,
       onWriteResult: (e) => { results.push(e); },
     });
-    await rec.reconcileAll([{ id: "u1", name: "A", pin: "1", slot: 1, enabled: true }]);
+    await rec.reconcileAll([{ id: "u1", name: "A", pin: "1111", slot: 1, enabled: true }]);
     expect(calls).toHaveLength(2); // ensure writes happened
     expect(results).toEqual([
       { lockId: "front-door", slot: 1, outcome: "ok" },
@@ -189,7 +189,7 @@ describe("Reconciler", () => {
       retryDelayMs: 1,
       onWriteResult: (e) => { results.push({ outcome: e.outcome }); },
     });
-    await rec.reconcileAll([{ id: "u1", name: "A", pin: "1", slot: 1, enabled: true }]);
+    await rec.reconcileAll([{ id: "u1", name: "A", pin: "1111", slot: 1, enabled: true }]);
     // front-door fails, back-door succeeds
     expect(results).toEqual([{ outcome: "error" }, { outcome: "ok" }]);
   });
@@ -199,7 +199,7 @@ describe("Reconciler", () => {
     const { writer, calls } = makeWriter();
     const rec = new Reconciler({ cache, writer, locks: LOCKS, secret: SECRET, retries: 0, debounceMs: 0 });
     await rec.reconcileLockOnly("front-door", [
-      { id: "u1", name: "A", pin: "1", slot: 1, enabled: true },
+      { id: "u1", name: "A", pin: "1111", slot: 1, enabled: true },
     ]);
     const frontCalls = calls.filter((c) => c.nodeId === 7);
     const backCalls = calls.filter((c) => c.nodeId === 9);
@@ -224,10 +224,10 @@ describe("Reconciler", () => {
       retries: 0,
       debounceMs: 20,
     });
-    rec.scheduleReconcile(() => [{ id: "u1", name: "A", pin: "1", slot: 1, enabled: true }]);
+    rec.scheduleReconcile(() => [{ id: "u1", name: "A", pin: "1111", slot: 1, enabled: true }]);
     rec.scheduleReconcile(() => [
-      { id: "u1", name: "A", pin: "1", slot: 1, enabled: true },
-      { id: "u2", name: "B", pin: "2", slot: 2, enabled: true },
+      { id: "u1", name: "A", pin: "1111", slot: 1, enabled: true },
+      { id: "u2", name: "B", pin: "2222", slot: 2, enabled: true },
     ]);
     await rec.drain();
     expect(calls).toHaveLength(4); // 2 slots * 2 locks
@@ -248,7 +248,7 @@ describe("Reconciler", () => {
         writeEvents.push(e);
       },
     });
-    await rec.reconcileAll([{ id: "u1", name: "A", pin: "1", slot: 1, enabled: true }]);
+    await rec.reconcileAll([{ id: "u1", name: "A", pin: "1111", slot: 1, enabled: true }]);
     expect(calls).toEqual([]);
     expect(writeEvents).toEqual([]);
     expect(cache.getLock("front-door")).toBeUndefined();
