@@ -232,4 +232,26 @@ describe("Reconciler", () => {
     await rec.drain();
     expect(calls).toHaveLength(4); // 2 slots * 2 locks
   });
+
+  it("readOnly mode skips writes, cache updates, and onWriteResult", async () => {
+    const { writer, calls } = makeWriter();
+    const writeEvents: unknown[] = [];
+    const rec = new Reconciler({
+      cache,
+      writer,
+      locks: LOCKS,
+      secret: SECRET,
+      retries: 0,
+      debounceMs: 0,
+      readOnly: true,
+      onWriteResult: (e) => {
+        writeEvents.push(e);
+      },
+    });
+    await rec.reconcileAll([{ id: "u1", name: "A", pin: "1", slot: 1, enabled: true }]);
+    expect(calls).toEqual([]);
+    expect(writeEvents).toEqual([]);
+    expect(cache.getLock("front-door")).toBeUndefined();
+    expect(cache.getLock("back-door")).toBeUndefined();
+  });
 });

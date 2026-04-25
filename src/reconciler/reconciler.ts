@@ -11,6 +11,7 @@ interface ReconcilerOptions {
   retries?: number;
   retryDelayMs?: number;
   debounceMs?: number;
+  readOnly?: boolean;
   onWriteResult?: (event: { lockId: string; slot: number; outcome: "ok" | "error" }) => void | Promise<void>;
 }
 
@@ -68,6 +69,7 @@ export class Reconciler {
   }
 
   private async doReconcileLock(lock: LockSyncTarget, desired: readonly DiffUser[]): Promise<void> {
+    if (this.opts.readOnly) return; // No diff, no writes, no cache update, no event.
     const cacheState = this.opts.cache.getLock(lock.id);
     const slots = cacheState?.slots ?? {};
     const ops = computeDiff({ users: desired, cache: slots, secret: this.opts.secret });

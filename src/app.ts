@@ -96,6 +96,7 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
     locks: config.locks,
     secret: opts.localSecret,
     debounceMs: 100,
+    readOnly: config.readOnly,
     onWriteResult: async (evt) => {
       await eventLog.append({
         ts: new Date().toISOString(),
