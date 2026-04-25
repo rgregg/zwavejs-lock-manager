@@ -1,17 +1,19 @@
 import type { ConnectionStatus } from "../status.js";
 
 export function renderStatusPartial(status: ConnectionStatus): string {
-  const disconnected: string[] = [];
-  if (status.zwaveJs === "disconnected") disconnected.push("ZWave gateway");
-  if (status.homeAssistant === "disconnected") disconnected.push("Home Assistant");
+  const zwOk = status.zwaveJs !== "disconnected";
+  const haOk = status.homeAssistant !== "disconnected";
+  const allOk = zwOk && haOk;
 
-  if (disconnected.length === 0) {
-    return `<div id="connection-banner"></div>`;
+  if (allOk && status.zwaveJs !== "unknown" && status.homeAssistant !== "unknown") {
+    return `<span class="status-dot status-dot--ok" title="ZWave and Home Assistant connected"><span class="status-dot__circle"></span>Connected</span>`;
   }
-
-  return `<div id="connection-banner">
-  <div style="background:#fee;border:1px solid #c33;padding:0.5rem;margin:0.5rem 0">
-    &#9888; <strong>Disconnected:</strong> ${disconnected.join(", ")}
-  </div>
-</div>`;
+  if (allOk) {
+    return `<span class="status-dot" title="Connection status unknown"><span class="status-dot__circle"></span></span>`;
+  }
+  const parts: string[] = [];
+  if (!zwOk) parts.push("ZWave gateway");
+  if (!haOk) parts.push("Home Assistant");
+  const label = parts.join(", ");
+  return `<span class="status-dot status-dot--err" title="Disconnected: ${label}"><span class="status-dot__circle"></span><span>Disconnected: ${label}</span></span>`;
 }

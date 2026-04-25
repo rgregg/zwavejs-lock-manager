@@ -1,11 +1,12 @@
 import type { LockConfig } from "../../config/schema.js";
 import type { LockState } from "../../cache/types.js";
 import { escapeHtml, layout } from "./layout.js";
+import type { LayoutOpts } from "./layout.js";
 
 export function renderLocksPage(
   locks: readonly LockConfig[],
   cache: (id: string) => LockState | undefined,
-  opts?: { readOnly?: boolean },
+  opts?: LayoutOpts,
 ): string {
   const rows = locks
     .map((lock) => {
@@ -14,41 +15,52 @@ export function renderLocksPage(
       const driftedSlots = st
         ? Object.values(st.slots).filter((s) => s?.drifted).length
         : 0;
-      const driftBadge =
-        driftedSlots > 0
-          ? `<a href="/locks/${lock.id}/drift"><span class="drift-badge">&#9888; Drift: ${driftedSlots} slot(s)</span></a>`
-          : "";
-      const driftClearForm =
-        driftedSlots > 0
-          ? `<form class="inline" method="post" action="/locks/${lock.id}/drift/clear">
-            <button type="submit">Accept desired (force resync)</button>
+      const driftBadge = driftedSlots > 0
+        ? `<a href="/locks/${lock.id}/drift" class="drift-badge">&#9888; Drift: ${driftedSlots} slot(s)</a>`
+        : "";
+      const driftClearForm = driftedSlots > 0
+        ? `<form class="inline" method="post" action="/locks/${lock.id}/drift/clear">
+            <button type="submit" class="btn-warning">Force resync (overwrite)</button>
           </form>`
-          : "";
+        : "";
       return `
       <tr>
         <td>${escapeHtml(lock.name)}${driftBadge}</td>
-        <td>node ${lock.nodeId}</td>
+        <td><span class="mono">node ${lock.nodeId}</span></td>
         <td class="status-${outcome}">${outcome}</td>
-        <td>${escapeHtml(st?.lastReconcileAt ?? "never")}</td>
-        <td>${escapeHtml(st?.lastVerifiedAt ?? "never")}</td>
+        <td><span class="mono">${escapeHtml(st?.lastReconcileAt ?? "never")}</span></td>
+        <td><span class="mono">${escapeHtml(st?.lastVerifiedAt ?? "never")}</span></td>
         <td>
-          <form class="inline" method="post" action="/locks/${lock.id}/resync">
-            <button type="submit">Resync</button>
-          </form>
-          <form class="inline" method="post" action="/locks/${lock.id}/verify"
-                onsubmit="return confirm('Verify will wake the lock. Proceed?');">
-            <button type="submit">Verify now</button>
-          </form>
-          ${driftClearForm}
+          <div class="actions">
+            <form class="inline" method="post" action="/locks/${lock.id}/resync">
+              <button type="submit" class="btn-secondary">Resync</button>
+            </form>
+            <form class="inline" method="post" action="/locks/${lock.id}/verify"
+                  onsubmit="return confirm('Verify will wake the lock. Proceed?');">
+              <button type="submit" class="btn-secondary">Verify now</button>
+            </form>
+            ${driftClearForm}
+          </div>
         </td>
       </tr>`;
     })
     .join("");
   const body = `
   <h1>Locks</h1>
-  <table>
-    <thead><tr><th>Name</th><th>Node</th><th>Last outcome</th><th>Last reconcile</th><th>Last verify</th><th>Actions</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
-  return layout("Locks", body, opts);
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Node</th>
+          <th>Last outcome</th>
+          <th>Last reconcile</th>
+          <th>Last verify</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>${rows || '<tr><td colspan="6" style="color:var(--text-muted);text-align:center;padding:1.5rem">No locks configured.</td></tr>'}</tbody>
+    </table>
+  </div>`;
+  return layout("Locks", body, { ...opts, activeNav: "locks" });
 }
