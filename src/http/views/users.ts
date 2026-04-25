@@ -41,7 +41,10 @@ export function renderUserRowEdit(user: User): string {
 }
 
 export function renderUsersPage(users: readonly User[], opts?: { readOnly?: boolean }): string {
-  const rows = users.map(renderUserRow).join("");
+  const rows = [...users]
+    .sort((a, b) => a.slot - b.slot)
+    .map(renderUserRow)
+    .join("");
   const body = `
   <h1>Users</h1>
   <form method="post" action="/users">
