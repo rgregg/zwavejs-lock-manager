@@ -1,5 +1,5 @@
 {
-  "name": "zwavejs-lock-users",
+  "name": "zwavejs-lock-manager",
   "version": "0.1.0",
   "private": true,
   "type": "module",

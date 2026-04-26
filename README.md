@@ -1,33 +1,59 @@
-# zwavejs-lock-users
+# zwavejs-lock-manager
 
 A small self-hosted service that keeps user PIN codes in sync across multiple Z-Wave door locks (via `zwave-js-server`) and fires named unlock notifications through Home Assistant.
 
-See the design spec: `docs/superpowers/specs/2026-04-21-zwave-lock-sync-design.md`
+## What it does
+
+- One web UI to manage who has a code on which slot, across every lock.
+- Reads existing codes off your locks (live, not from cache) and lets you adopt them as managed users.
+- Detects drift between your `users.json` and what's actually programmed on each lock — never silently overwrites a keypad-set code.
+- Fires HA notifications by name when someone unlocks (`<Name> unlocked Front Door`).
+- Read-only mode for safe first-deployment validation.
+
+See `docs/superpowers/specs/2026-04-21-zwave-lock-sync-design.md` for the design.
 
 ## Quickstart
 
-> For a first deployment against real hardware, follow `docs/deployment-guide.md` — it walks you through a read-only validation pass before enabling writes.
+> First deployment? Walk through `docs/deployment-guide.md` — it covers a read-only validation pass before enabling writes.
 
-1. Copy `docs/example-locks.yaml` to `data/locks.yaml` and edit `zwaveJs.url`, your HA URL, and your locks.
-2. Set env vars:
-   - `HA_TOKEN` — long-lived HA access token
-   - `LOCAL_SECRET` — any random string; used to fingerprint PINs
-3. `docker compose -f docker-compose.example.yml up -d`
-4. Visit `http://localhost:8080/users` to manage users.
+1. Copy `docs/example-locks.yaml` to `data/locks.yaml` and edit:
+   - `zwaveJs.url` — your `zwave-js-server` WebSocket
+   - `homeAssistant.url` and `notify.service`
+   - `locks:` — your locks (find each `nodeId` in Z-Wave JS UI or via HA's device page)
+2. Create `.env`:
+   - `HA_TOKEN` — long-lived HA access token (Settings → Profile → Long-Lived Access Tokens)
+   - `LOCAL_SECRET` — any random string (`openssl rand -hex 32`); used to fingerprint PINs
+3. `docker compose -f docker-compose.example.yml --env-file .env up -d`
+4. Open `http://<host>:8080/users`
 
 ## Config files (under `/data`)
 
-- `locks.yaml` — hand-edited (locks, HA, zwavejs URLs)
+- `locks.yaml` — hand-edited (locks, HA, zwavejs URLs, `readOnly` flag)
 - `users.json` — managed via the web UI
 - `state.json` — app-managed cache of what's currently on each lock
-- `events.jsonl` — append-only unlock/log stream
+- `events.jsonl` — append-only unlock/write log
+
+## Drift detection
+
+`zwavejs-lock-manager` never auto-overwrites codes set at the keypad. When a verify finds a slot whose PIN doesn't match `users.json`, it flags drift and surfaces it in the UI. From `/locks/<id>/drift`, choose per-slot:
+
+- **Adopt** — turn the lock's existing code into a new managed user (no write).
+- **Force resync** — push `users.json`'s desired state to the lock (overwrites the keypad-set code).
 
 ## Development
 
-```
+```bash
 npm install
-npm test
-npm run dev
+npm test         # 138+ unit + integration tests
+npm run dev      # live-reload via tsx
 ```
 
-See `docs/smoke-test-checklist.md` for pre-release verification.
+`docs/smoke-test-checklist.md` covers manual pre-release verification.
+
+## Roadmap
+
+- Home Assistant add-on packaging — see `docs/superpowers/plans/2026-04-26-home-assistant-addon.md`.
+
+## License
+
+MIT (see LICENSE).

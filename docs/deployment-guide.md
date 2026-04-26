@@ -1,6 +1,6 @@
 # Deployment guide
 
-Step-by-step for deploying zwavejs-lock-users against your real `zwave-js-server` and Home Assistant. We do it in two phases so you can validate safely.
+Step-by-step for deploying zwavejs-lock-manager against your real `zwave-js-server` and Home Assistant. We do it in two phases so you can validate safely.
 
 ## Prereqs
 
@@ -91,7 +91,7 @@ This confirms the full add-user flow works; only the final write step is gated.
 Once phase 1 is clean:
 
 1. Edit `data/locks.yaml`: change `readOnly: true` → `readOnly: false`.
-2. `docker compose restart zwavejs-lock-users`.
+2. `docker compose restart zwavejs-lock-manager`.
 3. Add a user in the UI. Within seconds, the code should work on every lock.
 4. Walk through the full smoke checklist (`docs/smoke-test-checklist.md`).
 
