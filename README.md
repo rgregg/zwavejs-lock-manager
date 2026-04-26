@@ -1,5 +1,8 @@
 # zwavejs-lock-manager
 
+[![CI](https://github.com/rgregg/zwavejs-lock-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/rgregg/zwavejs-lock-manager/actions/workflows/ci.yml)
+[![ghcr.io](https://img.shields.io/badge/ghcr.io-rgregg%2Fzwavejs--lock--manager-blue)](https://github.com/rgregg/zwavejs-lock-manager/pkgs/container/zwavejs-lock-manager)
+
 A small self-hosted service that keeps user PIN codes in sync across multiple Z-Wave door locks (via `zwave-js-server`) and fires named unlock notifications through Home Assistant.
 
 ## What it does
@@ -25,6 +28,17 @@ See `docs/superpowers/specs/2026-04-21-zwave-lock-sync-design.md` for the design
    - `LOCAL_SECRET` — any random string (`openssl rand -hex 32`); used to fingerprint PINs
 3. `docker compose -f docker-compose.example.yml --env-file .env up -d`
 4. Open `http://<host>:8080/users`
+
+### Pulling pre-built images
+
+Images are published to GHCR for `linux/amd64` and `linux/arm64`:
+
+```
+docker pull ghcr.io/rgregg/zwavejs-lock-manager:latest      # tracks main
+docker pull ghcr.io/rgregg/zwavejs-lock-manager:1           # latest 1.x release
+docker pull ghcr.io/rgregg/zwavejs-lock-manager:1.2         # latest 1.2.x release
+docker pull ghcr.io/rgregg/zwavejs-lock-manager:1.2.3       # specific release
+```
 
 ## Config files (under `/data`)
 
