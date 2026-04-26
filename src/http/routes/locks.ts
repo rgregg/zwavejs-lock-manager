@@ -28,7 +28,8 @@ export function registerLocksRoutes(app: FastifyInstance, deps: LocksDeps): void
     const lock = byId.get(req.params.id);
     if (!lock) return reply.code(404).send("not found");
     reply.type("text/html");
-    return renderDriftPage(lock, deps.cache.getLock(req.params.id), { readOnly: deps.readOnly ?? false });
+    const users = deps.store?.listUsers() ?? [];
+    return renderDriftPage(lock, deps.cache.getLock(req.params.id), users, { readOnly: deps.readOnly ?? false });
   });
 
   app.post<{ Params: { id: string }; Body: { slot: string; name: string } }>(
