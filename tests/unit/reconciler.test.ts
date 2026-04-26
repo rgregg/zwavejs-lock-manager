@@ -169,16 +169,20 @@ describe("Reconciler", () => {
     });
     await rec.reconcileAll([{ id: "u1", name: "A", pin: "1111", slot: 1, enabled: true }]);
     expect(calls).toHaveLength(2); // ensure writes happened
-    expect(results).toEqual([
-      { lockId: "front-door", slot: 1, outcome: "ok" },
-      { lockId: "back-door", slot: 1, outcome: "ok" },
-    ]);
+    // Cross-lock reconcile is parallel; callback order is not guaranteed.
+    expect(results).toHaveLength(2);
+    expect(results).toEqual(
+      expect.arrayContaining([
+        { lockId: "front-door", slot: 1, outcome: "ok" },
+        { lockId: "back-door", slot: 1, outcome: "ok" },
+      ]),
+    );
   });
 
   it("invokes onWriteResult with outcome=error when retries exhausted", async () => {
     const cache = await makeCache();
     const { writer } = makeWriter({ "set-7-1": 1 });
-    const results: Array<{ outcome: "ok" | "error" }> = [];
+    const results: Array<{ lockId: string; outcome: "ok" | "error" }> = [];
     const rec = new Reconciler({
       cache,
       writer,
@@ -187,11 +191,15 @@ describe("Reconciler", () => {
       retries: 0,
       debounceMs: 0,
       retryDelayMs: 1,
-      onWriteResult: (e) => { results.push({ outcome: e.outcome }); },
+      onWriteResult: (e) => {
+        results.push({ lockId: e.lockId, outcome: e.outcome });
+      },
     });
     await rec.reconcileAll([{ id: "u1", name: "A", pin: "1111", slot: 1, enabled: true }]);
-    // front-door fails, back-door succeeds
-    expect(results).toEqual([{ outcome: "error" }, { outcome: "ok" }]);
+    // Cross-lock reconcile is parallel; assert by lockId, not by index.
+    expect(results).toHaveLength(2);
+    expect(results.find((r) => r.lockId === "front-door")?.outcome).toBe("error");
+    expect(results.find((r) => r.lockId === "back-door")?.outcome).toBe("ok");
   });
 
   it("reconcileLockOnly reconciles a single lock, not others", async () => {
