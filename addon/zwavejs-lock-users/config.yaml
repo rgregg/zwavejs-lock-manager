@@ -1,6 +1,7 @@
 name: ZWaveJS Lock Users
 version: "0.1.0"
 slug: zwavejs_lock_users
+image: ghcr.io/rgregg/zwavejs-lock-users-{arch}
 description: Synchronize PIN codes across Z-Wave door locks and notify via Home Assistant.
 url: https://github.com/rgregg/zwavejs-lock-users
 arch:
