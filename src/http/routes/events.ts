@@ -10,10 +10,13 @@ interface EventsDeps {
 }
 
 export function registerEventsRoutes(app: FastifyInstance, deps: EventsDeps): void {
-  app.get("/events", async (_req, reply) => {
+  app.get("/events", async (req, reply) => {
     const tail = await deps.eventLog.tail(200);
     reply.type("text/html");
-    return renderEventsPage(tail, deps.readOnly !== undefined ? { readOnly: deps.readOnly } : undefined);
+    return renderEventsPage(tail, {
+      ...(deps.readOnly !== undefined ? { readOnly: deps.readOnly } : {}),
+      basePath: req.basePath,
+    });
   });
 
   app.get("/events/stream", (req, reply) => {

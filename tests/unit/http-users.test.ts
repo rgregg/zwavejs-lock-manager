@@ -152,6 +152,38 @@ describe("users routes", () => {
     expect(res.body).toContain(`id="user-${u.id}"`);
   });
 
+  it("prefixes links with X-Ingress-Path when the header is present", async () => {
+    await store.addUser({ name: "Alice", pin: "1234" });
+    const res = await app.inject({
+      method: "GET",
+      url: "/users",
+      headers: { "x-ingress-path": "/api/hassio_ingress/abc" },
+    });
+    expect(res.body).toContain('href="/api/hassio_ingress/abc/users"');
+    expect(res.body).toContain('hx-get="/api/hassio_ingress/abc/status"');
+  });
+
+  it("uses bare paths when X-Ingress-Path is absent", async () => {
+    await store.addUser({ name: "Alice", pin: "1234" });
+    const res = await app.inject({ method: "GET", url: "/users" });
+    expect(res.body).toContain('href="/users"');
+    expect(res.body).toContain('hx-get="/status"');
+  });
+
+  it("redirects honor X-Ingress-Path on POST /users", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/users",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        "x-ingress-path": "/api/hassio_ingress/xyz",
+      },
+      payload: "name=Bob&pin=4321",
+    });
+    expect(res.statusCode).toBe(302);
+    expect(res.headers.location).toBe("/api/hassio_ingress/xyz/users");
+  });
+
   it("POST /users/:id/edit with an invalid PIN returns 400", async () => {
     const u = await store.addUser({ name: "Alice", pin: "1111" });
     const res = await app.inject({
