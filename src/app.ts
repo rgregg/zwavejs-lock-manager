@@ -55,7 +55,9 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
     throw new Error("LOCAL_SECRET env var is required");
   }
 
-  const config = await loadLocksConfig(join(opts.dataDir, "locks.yaml"));
+  const inAddonMode = !!process.env.SUPERVISOR_TOKEN;
+  const configFile = inAddonMode ? "options.json" : "locks.yaml";
+  const config = await loadLocksConfig(join(opts.dataDir, configFile));
   for (const w of config.warnings) log.warn({ warning: w }, "config warning");
 
   const maxSlots = Math.min(...config.locks.map((l) => l.maxCodeSlots));
