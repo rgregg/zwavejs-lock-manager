@@ -23,12 +23,14 @@ services:
 options:
   read_only: true
   notify_service: notify.notify
+  zwave_js_url: ""
   verify_interval_days: 7
   verify_stagger_minutes: 60
   locks: []
 schema:
   read_only: bool
   notify_service: str
+  zwave_js_url: str?
   verify_interval_days: int(1,365)
   verify_stagger_minutes: int(0,1440)
   locks:

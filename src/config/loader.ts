@@ -66,7 +66,7 @@ export async function loadLocksConfig(path: string, opts: LoadOptions = {}): Pro
     }
     const o = result.data;
     const shaped: LocksConfig = {
-      zwaveJs: { url: "" }, // discovered at runtime
+      zwaveJs: { url: o.zwave_js_url ?? "" }, // empty -> discovered at runtime via Supervisor
       homeAssistant: {
         url: "http://supervisor/core",
         token: env.SUPERVISOR_TOKEN ?? "",

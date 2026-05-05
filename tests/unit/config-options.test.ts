@@ -32,6 +32,21 @@ describe("loadLocksConfig (addon mode)", () => {
     ]);
   });
 
+  it("uses zwave_js_url override when provided (skipping discovery)", async () => {
+    const dir = await withOptionsFile({
+      read_only: false,
+      notify_service: "notify.family",
+      zwave_js_url: "ws://piworker01.lan:3000",
+      verify_interval_days: 7,
+      verify_stagger_minutes: 60,
+      locks: [{ id: "k", name: "K", node_id: 51, max_code_slots: 30 }],
+    });
+    const cfg = await loadLocksConfig(join(dir, "options.json"), {
+      env: { SUPERVISOR_TOKEN: "tok" },
+    });
+    expect(cfg.zwaveJs.url).toBe("ws://piworker01.lan:3000");
+  });
+
   it("rejects options.json without locks", async () => {
     const dir = await withOptionsFile({ read_only: false });
     await expect(
