@@ -17,7 +17,7 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /build/dist ./dist
-COPY addon/zwavejs-lock-users/run.sh /run.sh
+COPY addon/zwavejs-lock-manager/run.sh /run.sh
 RUN chmod +x /run.sh
 EXPOSE 8080
 CMD ["/run.sh"]

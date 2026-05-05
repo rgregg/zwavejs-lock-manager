@@ -15,5 +15,5 @@ if [ ! -f /data/local_secret ]; then
 fi
 export LOCAL_SECRET="$(cat /data/local_secret)"
 
-bashio::log.info "Starting zwavejs-lock-users (addon mode)"
+bashio::log.info "Starting zwavejs-lock-manager (addon mode)"
 exec node /app/dist/index.js

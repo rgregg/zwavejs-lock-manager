@@ -38,20 +38,20 @@ jobs:
       - name: Resolve version
         id: meta
         run: |
-          VERSION=$(awk -F'"' '/^version:/ {print $2}' addon/zwavejs-lock-users/config.yaml)
+          VERSION=$(awk -F'"' '/^version:/ {print $2}' addon/zwavejs-lock-manager/config.yaml)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: addon/zwavejs-lock-users/Dockerfile
+          file: addon/zwavejs-lock-manager/Dockerfile
           platforms: linux/${{ matrix.arch == 'aarch64' && 'arm64' || 'amd64' }}
           push: true
           build-args: |
             BUILD_FROM=ghcr.io/home-assistant/${{ matrix.arch }}-base:3.19
           tags: |
-            ghcr.io/${{ github.repository_owner }}/zwavejs-lock-users-${{ matrix.arch }}:${{ steps.meta.outputs.version }}
-            ghcr.io/${{ github.repository_owner }}/zwavejs-lock-users-${{ matrix.arch }}:latest
+            ghcr.io/${{ github.repository_owner }}/zwavejs-lock-manager-${{ matrix.arch }}:${{ steps.meta.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/zwavejs-lock-manager-${{ matrix.arch }}:latest
           cache-from: type=gha,scope=addon-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=addon-${{ matrix.arch }}
