@@ -1,0 +1,40 @@
+name: ZWaveJS Lock Manager
+version: "0.1.0"
+slug: zwavejs_lock_manager
+image: ghcr.io/rgregg/zwavejs-lock-manager-{arch}
+description: Synchronize PIN codes across Z-Wave door locks and notify via Home Assistant.
+url: https://github.com/rgregg/zwavejs-lock-manager
+arch:
+  - amd64
+  - aarch64
+init: false
+startup: services
+boot: auto
+panel_icon: mdi:lock-outline
+ingress: true
+ingress_port: 8080
+homeassistant_api: true
+hassio_api: true
+auth_api: false
+discovery:
+  - zwave_js
+services:
+  - zwave_js:want
+options:
+  read_only: true
+  notify_service: notify.notify
+  zwave_js_url: ""
+  verify_interval_days: 7
+  verify_stagger_minutes: 60
+  locks: []
+schema:
+  read_only: bool
+  notify_service: str
+  zwave_js_url: str?
+  verify_interval_days: int(1,365)
+  verify_stagger_minutes: int(0,1440)
+  locks:
+    - id: str
+      name: str
+      node_id: int(1,232)
+      max_code_slots: int(1,250)?

@@ -1,9 +1,10 @@
 import type { User } from "../../store/types.js";
-import { escapeHtml, layout } from "./layout.js";
+import { escapeHtml, layout, withBase } from "./layout.js";
 import type { LayoutOpts } from "./layout.js";
 
-export function renderUserRow(user: User): string {
+export function renderUserRow(user: User, opts?: LayoutOpts): string {
   const id = user.id;
+  const link = (p: string) => withBase(opts, p);
   return `<tr id="user-${id}">
   <td class="col-num"><span class="mono">${user.slot}</span></td>
   <td>${escapeHtml(user.name)}</td>
@@ -11,11 +12,11 @@ export function renderUserRow(user: User): string {
   <td>${user.enabled ? "Enabled" : '<span style="color:var(--text-muted)">Disabled</span>'}</td>
   <td>
     <div class="actions">
-      <button class="btn-secondary" hx-get="/users/${id}/edit-form" hx-target="#user-${id}" hx-swap="outerHTML">Edit</button>
-      <form class="inline" method="post" action="/users/${id}/toggle">
+      <button class="btn-secondary" hx-get="${link(`/users/${id}/edit-form`)}" hx-target="#user-${id}" hx-swap="outerHTML">Edit</button>
+      <form class="inline" method="post" action="${link(`/users/${id}/toggle`)}">
         <button type="submit" class="btn-secondary">${user.enabled ? "Disable" : "Enable"}</button>
       </form>
-      <form class="inline" method="post" action="/users/${id}/delete"
+      <form class="inline" method="post" action="${link(`/users/${id}/delete`)}"
             onsubmit="return confirm('Delete ${escapeHtml(user.name)}?');">
         <button type="submit" class="btn-danger">Delete</button>
       </form>
@@ -24,8 +25,9 @@ export function renderUserRow(user: User): string {
 </tr>`;
 }
 
-export function renderUserRowEdit(user: User): string {
+export function renderUserRowEdit(user: User, opts?: LayoutOpts): string {
   const id = user.id;
+  const link = (p: string) => withBase(opts, p);
   return `<tr id="user-${id}">
   <td class="col-num"><span class="mono">${user.slot}</span></td>
   <td><input form="edit-${id}" name="name" value="${escapeHtml(user.name)}" required aria-label="Name" /></td>
@@ -34,26 +36,27 @@ export function renderUserRowEdit(user: User): string {
   <td>
     <div class="actions">
       <form id="edit-${id}" class="inline"
-            hx-post="/users/${id}/edit"
+            hx-post="${link(`/users/${id}/edit`)}"
             hx-target="#user-${id}"
             hx-swap="outerHTML">
         <button type="submit">Save</button>
       </form>
-      <button class="btn-secondary" hx-get="/users/${id}/row" hx-target="#user-${id}" hx-swap="outerHTML">Cancel</button>
+      <button class="btn-secondary" hx-get="${link(`/users/${id}/row`)}" hx-target="#user-${id}" hx-swap="outerHTML">Cancel</button>
     </div>
   </td>
 </tr>`;
 }
 
 export function renderUsersPage(users: readonly User[], opts?: LayoutOpts): string {
+  const link = (p: string) => withBase(opts, p);
   const rows = [...users]
     .sort((a, b) => a.slot - b.slot)
-    .map(renderUserRow)
+    .map((u) => renderUserRow(u, opts))
     .join("");
   const body = `
   <h1>Users</h1>
   <div class="card" style="margin-bottom:1.5rem">
-    <form method="post" action="/users">
+    <form method="post" action="${link("/users")}">
       <div class="form-grid">
         <label class="field">Name
           <input name="name" required placeholder="e.g. Alice" />

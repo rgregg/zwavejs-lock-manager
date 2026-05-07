@@ -1,8 +1,9 @@
 import type { LoggedEvent } from "../../log/types.js";
-import { escapeHtml, layout } from "./layout.js";
+import { escapeHtml, layout, withBase } from "./layout.js";
 import type { LayoutOpts } from "./layout.js";
 
 export function renderEventsPage(events: readonly LoggedEvent[], opts?: LayoutOpts): string {
+  const link = (p: string) => withBase(opts, p);
   const reversed = events.slice().reverse();
   const grouped = groupByDay(reversed);
   const sections = grouped
@@ -27,7 +28,7 @@ export function renderEventsPage(events: readonly LoggedEvent[], opts?: LayoutOp
     .join("");
   const body = `
   <h1>Events</h1>
-  <p><small>Stream: <span hx-get="/events/stream" hx-trigger="load" hx-swap="none"></span></small></p>
+  <p><small>Stream: <span hx-get="${link("/events/stream")}" hx-trigger="load" hx-swap="none"></span></small></p>
   ${sections || '<p style="color:var(--text-muted)">No events yet.</p>'}`;
   return layout("Events", body, { ...opts, activeNav: "events" });
 }
