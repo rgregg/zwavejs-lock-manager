@@ -3,6 +3,7 @@
 // as we use them. If the server offers an older max, connection fails at startup.
 import WebSocket from "ws";
 import { randomUUID } from "node:crypto";
+import type { Logger } from "pino";
 import type { EventBus } from "../events/bus.js";
 import type { UserCodeSlot } from "./types.js";
 
@@ -14,6 +15,7 @@ interface ZWaveJSClientOptions {
   bus: EventBus;
   reconnectBaseMs?: number;
   reconnectMaxMs?: number;
+  log?: Logger;
 }
 
 interface PendingCall {
@@ -174,15 +176,27 @@ export class ZWaveJSClient {
   }
 
   private handleEvent(event: Record<string, unknown>): void {
-    // Notification CC: { source: "node", event: "notification", nodeId, ccId: 0x71, args: { userId, eventType } }
+    // Notification CC v8 (Access Control) carries the user-code slot in different
+    // shapes depending on the lock model and zwave-js version:
+    //   args.userId               (legacy / some custom shapes)
+    //   args.parameters           (a bare number)
+    //   args.parameters.userId    (object form, common for Yale Assure / Schlage)
     if (event.event === "notification" && typeof event.nodeId === "number") {
       const args = event.args as Record<string, unknown> | undefined;
-      const userId = args?.userId;
-      if (typeof userId === "number") {
+      const slot = extractKeypadSlot(args);
+      // Log every raw notification we see, regardless of parse outcome, so a
+      // future shape we don't recognize can still be diagnosed from the logs.
+      this.opts.log?.info(
+        { nodeId: event.nodeId, args, parsedSlot: slot },
+        slot !== undefined
+          ? "zwave notification: extracted keypad slot"
+          : "zwave notification: could not extract keypad slot",
+      );
+      if (slot !== undefined) {
         this.opts.bus.emit("unlock", {
           ts: new Date().toISOString(),
           lockId: `node-${event.nodeId}`,
-          slot: userId,
+          slot,
         });
       }
     }
@@ -268,4 +282,18 @@ export class ZWaveJSClient {
     }
     return out;
   }
+}
+
+export function extractKeypadSlot(
+  args: Record<string, unknown> | undefined,
+): number | undefined {
+  if (!args) return undefined;
+  if (typeof args.userId === "number") return args.userId;
+  const params = args.parameters;
+  if (typeof params === "number") return params;
+  if (params && typeof params === "object") {
+    const inner = (params as Record<string, unknown>).userId;
+    if (typeof inner === "number") return inner;
+  }
+  return undefined;
 }

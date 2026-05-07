@@ -68,7 +68,7 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
   const bus = new EventBus();
   const tracker = new ConnectionStatusTracker();
   bus.on("connection", (e) => tracker.set(e.source, e.status));
-  const zwave = new ZWaveJSClient({ url: config.zwaveJs.url, bus });
+  const zwave = new ZWaveJSClient({ url: config.zwaveJs.url, bus, log });
   const notifier = new HaNotifier({
     url: config.homeAssistant.url,
     token: config.homeAssistant.token,

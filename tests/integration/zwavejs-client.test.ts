@@ -117,13 +117,53 @@ describe("ZWaveJSClient", () => {
     expect(slot3Polls).toHaveLength(2);
   });
 
-  it("unlock notification event fires on the bus", async () => {
+  it("unlock notification event fires on the bus (legacy args.userId shape)", async () => {
     const seen: Array<{ lockId: string; slot: number }> = [];
     bus.on("unlock", (e) => seen.push({ lockId: e.lockId, slot: e.slot }));
     await client.start();
     server.pushEvent({ source: "node", event: "notification", nodeId: 7, args: { userId: 3 } });
     await new Promise((r) => setTimeout(r, 20));
     expect(seen).toEqual([{ lockId: "node-7", slot: 3 }]);
+  });
+
+  it("unlock notification event fires when slot is in args.parameters as a number", async () => {
+    const seen: Array<{ lockId: string; slot: number }> = [];
+    bus.on("unlock", (e) => seen.push({ lockId: e.lockId, slot: e.slot }));
+    await client.start();
+    server.pushEvent({
+      source: "node",
+      event: "notification",
+      nodeId: 51,
+      args: {
+        type: 6,
+        event: 6,
+        label: "Access Control",
+        eventLabel: "Keypad Unlock Operation",
+        parameters: 11,
+      },
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(seen).toEqual([{ lockId: "node-51", slot: 11 }]);
+  });
+
+  it("unlock notification event fires when slot is in args.parameters.userId (Yale Assure shape)", async () => {
+    const seen: Array<{ lockId: string; slot: number }> = [];
+    bus.on("unlock", (e) => seen.push({ lockId: e.lockId, slot: e.slot }));
+    await client.start();
+    server.pushEvent({
+      source: "node",
+      event: "notification",
+      nodeId: 51,
+      args: {
+        type: 6,
+        event: 6,
+        label: "Access Control",
+        eventLabel: "Keypad Unlock Operation",
+        parameters: { userId: 11 },
+      },
+    });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(seen).toEqual([{ lockId: "node-51", slot: 11 }]);
   });
 
   it("getAllUserCodes rejects with 'connection closed' when server disconnects mid-read", async () => {
