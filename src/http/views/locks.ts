@@ -1,6 +1,6 @@
 import type { LockConfig } from "../../config/schema.js";
 import type { LockState } from "../../cache/types.js";
-import { escapeHtml, layout } from "./layout.js";
+import { escapeHtml, layout, withBase } from "./layout.js";
 import type { LayoutOpts } from "./layout.js";
 
 export function renderLocksPage(
@@ -8,6 +8,7 @@ export function renderLocksPage(
   cache: (id: string) => LockState | undefined,
   opts?: LayoutOpts,
 ): string {
+  const link = (p: string) => withBase(opts, p);
   const rows = locks
     .map((lock) => {
       const st = cache(lock.id);
@@ -16,10 +17,10 @@ export function renderLocksPage(
         ? Object.values(st.slots).filter((s) => s?.drifted).length
         : 0;
       const driftBadge = driftedSlots > 0
-        ? `<a href="/locks/${lock.id}/drift" class="drift-badge">&#9888; Drift: ${driftedSlots} slot(s)</a>`
+        ? `<a href="${link(`/locks/${lock.id}/drift`)}" class="drift-badge">&#9888; Drift: ${driftedSlots} slot(s)</a>`
         : "";
       const driftClearForm = driftedSlots > 0
-        ? `<form class="inline" method="post" action="/locks/${lock.id}/drift/clear">
+        ? `<form class="inline" method="post" action="${link(`/locks/${lock.id}/drift/clear`)}">
             <button type="submit" class="btn-warning">Force resync (overwrite)</button>
           </form>`
         : "";
@@ -32,10 +33,10 @@ export function renderLocksPage(
         <td><span class="mono">${escapeHtml(st?.lastVerifiedAt ?? "never")}</span></td>
         <td>
           <div class="actions">
-            <form class="inline" method="post" action="/locks/${lock.id}/resync">
+            <form class="inline" method="post" action="${link(`/locks/${lock.id}/resync`)}">
               <button type="submit" class="btn-secondary">Resync</button>
             </form>
-            <form class="inline" method="post" action="/locks/${lock.id}/verify"
+            <form class="inline" method="post" action="${link(`/locks/${lock.id}/verify`)}"
                   onsubmit="return confirm('Verify will wake the lock. Proceed?');">
               <button type="submit" class="btn-secondary">Verify now</button>
             </form>

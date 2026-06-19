@@ -10,9 +10,12 @@ interface UsersDeps {
 }
 
 export function registerUsersRoutes(app: FastifyInstance, deps: UsersDeps): void {
-  app.get("/users", async (_req, reply) => {
+  app.get("/users", async (req, reply) => {
     reply.type("text/html");
-    return renderUsersPage(deps.store.listUsers(), deps.readOnly !== undefined ? { readOnly: deps.readOnly } : undefined);
+    return renderUsersPage(deps.store.listUsers(), {
+      ...(deps.readOnly !== undefined ? { readOnly: deps.readOnly } : {}),
+      basePath: req.basePath,
+    });
   });
 
   app.post<{ Body: { name: string; pin: string } }>("/users", async (req, reply) => {
@@ -24,7 +27,7 @@ export function registerUsersRoutes(app: FastifyInstance, deps: UsersDeps): void
     }
     await deps.store.addUser({ name: req.body.name.trim(), pin: req.body.pin });
     deps.onChange();
-    reply.redirect("/users");
+    reply.redirect(`${req.basePath}/users`);
   });
 
   app.post<{ Params: { id: string }; Body: { name?: string; pin?: string; enabled?: string } }>(
@@ -46,9 +49,9 @@ export function registerUsersRoutes(app: FastifyInstance, deps: UsersDeps): void
       if (htmx) {
         const updated = deps.store.getUser(user.id)!;
         reply.type("text/html");
-        return renderUserRow(updated);
+        return renderUserRow(updated, { basePath: req.basePath });
       }
-      reply.redirect("/users");
+      reply.redirect(`${req.basePath}/users`);
     },
   );
 
@@ -56,14 +59,14 @@ export function registerUsersRoutes(app: FastifyInstance, deps: UsersDeps): void
     const user = deps.store.getUser(req.params.id);
     if (!user) return reply.code(404).send("not found");
     reply.type("text/html");
-    return renderUserRow(user);
+    return renderUserRow(user, { basePath: req.basePath });
   });
 
   app.get<{ Params: { id: string } }>("/users/:id/edit-form", async (req, reply) => {
     const user = deps.store.getUser(req.params.id);
     if (!user) return reply.code(404).send("not found");
     reply.type("text/html");
-    return renderUserRowEdit(user);
+    return renderUserRowEdit(user, { basePath: req.basePath });
   });
 
   app.post<{ Params: { id: string } }>("/users/:id/toggle", async (req, reply) => {
@@ -71,12 +74,12 @@ export function registerUsersRoutes(app: FastifyInstance, deps: UsersDeps): void
     if (!user) return reply.code(404).send("not found");
     await deps.store.updateUser(user.id, { enabled: !user.enabled });
     deps.onChange();
-    reply.redirect("/users");
+    reply.redirect(`${req.basePath}/users`);
   });
 
   app.post<{ Params: { id: string } }>("/users/:id/delete", async (req, reply) => {
     await deps.store.deleteUser(req.params.id);
     deps.onChange();
-    reply.redirect("/users");
+    reply.redirect(`${req.basePath}/users`);
   });
 }

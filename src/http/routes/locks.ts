@@ -19,9 +19,12 @@ interface LocksDeps {
 export function registerLocksRoutes(app: FastifyInstance, deps: LocksDeps): void {
   const byId = new Map(deps.locks.map((l) => [l.id, l]));
 
-  app.get("/locks", async (_req, reply) => {
+  app.get("/locks", async (req, reply) => {
     reply.type("text/html");
-    return renderLocksPage(deps.locks, (id) => deps.cache.getLock(id), deps.readOnly !== undefined ? { readOnly: deps.readOnly } : undefined);
+    return renderLocksPage(deps.locks, (id) => deps.cache.getLock(id), {
+      ...(deps.readOnly !== undefined ? { readOnly: deps.readOnly } : {}),
+      basePath: req.basePath,
+    });
   });
 
   app.get<{ Params: { id: string } }>("/locks/:id/drift", async (req, reply) => {
@@ -29,7 +32,10 @@ export function registerLocksRoutes(app: FastifyInstance, deps: LocksDeps): void
     if (!lock) return reply.code(404).send("not found");
     reply.type("text/html");
     const users = deps.store?.listUsers() ?? [];
-    return renderDriftPage(lock, deps.cache.getLock(req.params.id), users, { readOnly: deps.readOnly ?? false });
+    return renderDriftPage(lock, deps.cache.getLock(req.params.id), users, {
+      readOnly: deps.readOnly ?? false,
+      basePath: req.basePath,
+    });
   });
 
   app.post<{ Params: { id: string }; Body: { slot: string; name: string } }>(
@@ -53,25 +59,25 @@ export function registerLocksRoutes(app: FastifyInstance, deps: LocksDeps): void
       const user = await deps.store.addUser({ name, pin: slotState.pin, slot: slotNum });
       await deps.cache.adoptSlot(req.params.id, slotNum, user.id);
       deps.onChange?.();
-      reply.redirect(`/locks/${req.params.id}/drift`);
+      reply.redirect(`${req.basePath}/locks/${req.params.id}/drift`);
     },
   );
 
   app.post<{ Params: { id: string } }>("/locks/:id/resync", async (req, reply) => {
     if (!byId.has(req.params.id)) return reply.code(404).send("not found");
     deps.onResync(req.params.id);
-    reply.redirect("/locks");
+    reply.redirect(`${req.basePath}/locks`);
   });
 
   app.post<{ Params: { id: string } }>("/locks/:id/verify", async (req, reply) => {
     if (!byId.has(req.params.id)) return reply.code(404).send("not found");
     deps.onVerify(req.params.id);
-    reply.redirect("/locks");
+    reply.redirect(`${req.basePath}/locks`);
   });
 
   app.post<{ Params: { id: string } }>("/locks/:id/drift/clear", async (req, reply) => {
     if (!byId.has(req.params.id)) return reply.code(404).send("not found");
     deps.onDriftClear(req.params.id);
-    reply.redirect("/locks");
+    reply.redirect(`${req.basePath}/locks`);
   });
 }

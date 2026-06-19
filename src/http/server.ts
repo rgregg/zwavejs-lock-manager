@@ -27,9 +27,21 @@ export interface ServerDeps {
   onDriftClear?: (lockId: string) => void;
 }
 
+declare module "fastify" {
+  interface FastifyRequest {
+    basePath: string;
+  }
+}
+
 export function buildServer(deps: ServerDeps): FastifyInstance {
   const app = Fastify({ logger: false });
   app.register(formbody);
+  app.decorateRequest("basePath", "");
+  app.addHook("preHandler", (req, _reply, done) => {
+    const ip = req.headers["x-ingress-path"];
+    if (typeof ip === "string") req.basePath = ip;
+    done();
+  });
   registerHealthRoutes(app);
   if (deps.store) {
     registerUsersRoutes(app, {
@@ -64,7 +76,7 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
       return renderStatusPartial(statusTracker.get());
     });
   }
-  app.get("/", (_req, reply) => reply.redirect("/users"));
+  app.get("/", (req, reply) => reply.redirect(`${req.basePath}/users`));
   return app;
 }
 

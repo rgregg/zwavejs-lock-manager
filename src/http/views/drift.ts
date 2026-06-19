@@ -1,7 +1,7 @@
 import type { LockConfig } from "../../config/schema.js";
 import type { LockState } from "../../cache/types.js";
 import type { User } from "../../store/types.js";
-import { escapeHtml, layout } from "./layout.js";
+import { escapeHtml, layout, withBase } from "./layout.js";
 import type { LayoutOpts } from "./layout.js";
 
 export function renderDriftPage(
@@ -10,6 +10,7 @@ export function renderDriftPage(
   users: readonly User[],
   opts?: LayoutOpts,
 ): string {
+  const link = (p: string) => withBase(opts, p);
   const drifted = Object.entries(state?.slots ?? {})
     .filter(([, s]) => s.drifted)
     .map(([k, s]) => ({ slot: Number(k), slotState: s }))
@@ -32,7 +33,7 @@ export function renderDriftPage(
     <div class="drift-card">
       <div class="drift-card__slot">Slot ${slot}</div>
       <div class="drift-card__pin">${escapeHtml(pin)}</div>
-      <form method="post" action="/locks/${escapeHtml(lock.id)}/drift/adopt" class="drift-card__form">
+      <form method="post" action="${link(`/locks/${escapeHtml(lock.id)}/drift/adopt`)}" class="drift-card__form">
         <input type="hidden" name="slot" value="${slot}" />
         <label class="field">Name
           <input name="name" placeholder="Slot ${slot} (adopted)" required />
@@ -77,7 +78,7 @@ export function renderDriftPage(
   }
 
   const body = `
-  <p style="margin-bottom:1rem"><a href="/locks">&larr; Back to locks</a></p>
+  <p style="margin-bottom:1rem"><a href="${link("/locks")}">&larr; Back to locks</a></p>
   <h1>Drift: ${escapeHtml(lock.name)}</h1>
   ${
     drifted.length === 0
@@ -85,7 +86,7 @@ export function renderDriftPage(
       : `${sections.join("")}
   <hr style="border:none;border-top:1px solid var(--border);margin:1.5rem 0" />
   <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:0.75rem">Force resync clears drift on every drifted slot at once and lets the reconciler push <code>users.json</code> to the lock. In read-only mode this just clears the flags — actual writes happen when you flip <code>readOnly: false</code>.</p>
-  <form method="post" action="/locks/${escapeHtml(lock.id)}/drift/clear">
+  <form method="post" action="${link(`/locks/${escapeHtml(lock.id)}/drift/clear`)}">
     <button type="submit" class="btn-warning" onclick="return confirm('This will clear drift on all drifted slots and queue a reconcile. Proceed?')">Force resync (overwrite lock)</button>
   </form>`
   }`;

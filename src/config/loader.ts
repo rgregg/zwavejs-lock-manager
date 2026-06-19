@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
 import { LocksConfigSchema, type LocksConfig } from "./schema.js";
+import { AddonOptionsSchema } from "./options-schema.js";
 
 export interface LoadedConfig extends LocksConfig {
   warnings: string[];
@@ -40,10 +41,58 @@ function interpolateValue(
   return value;
 }
 
+function checkUniqueness(config: LocksConfig): void {
+  const ids = new Set<string>();
+  const nodes = new Set<number>();
+  for (const lock of config.locks) {
+    if (ids.has(lock.id)) throw new Error(`Duplicate lock id: ${lock.id}`);
+    if (nodes.has(lock.nodeId)) throw new Error(`Duplicate nodeId: ${lock.nodeId}`);
+    ids.add(lock.id);
+    nodes.add(lock.nodeId);
+  }
+}
+
 export async function loadLocksConfig(path: string, opts: LoadOptions = {}): Promise<LoadedConfig> {
   const env = opts.env ?? process.env;
+  const inAddonMode = !!env.SUPERVISOR_TOKEN;
   const raw = await readFile(path, "utf8");
   const warnings: string[] = [];
+
+  if (inAddonMode) {
+    const parsedJson = JSON.parse(raw);
+    const result = AddonOptionsSchema.safeParse(parsedJson);
+    if (!result.success) {
+      throw new Error(`Invalid addon options: ${result.error.message}`);
+    }
+    const o = result.data;
+    const shaped: LocksConfig = {
+      zwaveJs: { url: o.zwave_js_url ?? "" }, // empty -> discovered at runtime via Supervisor
+      homeAssistant: {
+        url: "http://supervisor/core",
+        token: env.SUPERVISOR_TOKEN ?? "",
+        notify: { service: o.notify_service },
+      },
+      verify: {
+        intervalDays: o.verify_interval_days,
+        staggerMinutes: o.verify_stagger_minutes,
+      },
+      readOnly: o.read_only,
+      locks: o.locks.map((l) => ({
+        id: l.id,
+        name: l.name,
+        nodeId: l.node_id,
+        maxCodeSlots: l.max_code_slots,
+      })),
+    };
+    // Re-validate against the same schema we use for YAML mode so any drift
+    // between the two paths fails loudly.
+    const re = LocksConfigSchema.safeParse(shaped);
+    if (!re.success) {
+      throw new Error(`addon config shape mismatch: ${re.error.message}`);
+    }
+    checkUniqueness(re.data);
+    return { ...re.data, warnings };
+  }
 
   const parsed = parseYaml(raw);
   const interpolated = interpolateValue(parsed, env, warnings);
@@ -54,14 +103,7 @@ export async function loadLocksConfig(path: string, opts: LoadOptions = {}): Pro
   }
   const config = result.data;
 
-  const ids = new Set<string>();
-  const nodes = new Set<number>();
-  for (const lock of config.locks) {
-    if (ids.has(lock.id)) throw new Error(`Duplicate lock id: ${lock.id}`);
-    if (nodes.has(lock.nodeId)) throw new Error(`Duplicate nodeId: ${lock.nodeId}`);
-    ids.add(lock.id);
-    nodes.add(lock.nodeId);
-  }
+  checkUniqueness(config);
 
   return { ...config, warnings };
 }

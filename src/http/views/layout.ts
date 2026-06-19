@@ -3,11 +3,21 @@ export type ActiveNav = "users" | "locks" | "events";
 export interface LayoutOpts {
   readOnly?: boolean;
   activeNav?: ActiveNav;
+  /**
+   * Path prefix for all internal links. Set from the `X-Ingress-Path` request
+   * header so the UI works behind Home Assistant Ingress; empty in standalone.
+   */
+  basePath?: string;
+}
+
+export function withBase(opts: { basePath?: string } | undefined, path: string): string {
+  return `${opts?.basePath ?? ""}${path}`;
 }
 
 export function layout(title: string, body: string, opts?: LayoutOpts): string {
   const readOnly = opts?.readOnly ?? false;
   const activeNav = opts?.activeNav;
+  const link = (path: string) => withBase(opts, path);
 
   const navLink = (href: string, label: string, key: ActiveNav) => {
     const active = activeNav === key;
@@ -146,18 +156,18 @@ export function layout(title: string, body: string, opts?: LayoutOpts): string {
 <body>
   <header class="app-header">
     <div class="app-header__inner">
-      <a class="app-header__brand" href="/users">Lock Users</a>
+      <a class="app-header__brand" href="${link("/users")}">Lock Users</a>
       <div class="app-header__right">
         ${readOnlyBadge}
-        <div hx-get="/status" hx-trigger="load, every 5s" hx-swap="innerHTML"></div>
+        <div hx-get="${link("/status")}" hx-trigger="load, every 5s" hx-swap="innerHTML"></div>
       </div>
     </div>
   </header>
   <nav class="app-nav" aria-label="Main">
     <div class="app-nav__inner">
-      ${navLink("/users", "Users", "users")}
-      ${navLink("/locks", "Locks", "locks")}
-      ${navLink("/events", "Events", "events")}
+      ${navLink(link("/users"), "Users", "users")}
+      ${navLink(link("/locks"), "Locks", "locks")}
+      ${navLink(link("/events"), "Events", "events")}
     </div>
   </nav>
   <main>

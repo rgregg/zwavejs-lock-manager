@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import type { FastifyInstance } from "fastify";
 import { loadLocksConfig } from "./config/loader.js";
+import { discoverZwaveJsUrl } from "./config/discovery.js";
 import type { LocksConfig } from "./config/schema.js";
 import { Store } from "./store/store.js";
 import { LockStateCache } from "./cache/cache.js";
@@ -55,8 +56,17 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
     throw new Error("LOCAL_SECRET env var is required");
   }
 
-  const config = await loadLocksConfig(join(opts.dataDir, "locks.yaml"));
+  const inAddonMode = !!process.env.SUPERVISOR_TOKEN;
+  const configFile = inAddonMode ? "options.json" : "locks.yaml";
+  const config = await loadLocksConfig(join(opts.dataDir, configFile));
   for (const w of config.warnings) log.warn({ warning: w }, "config warning");
+
+  if (!config.zwaveJs.url && process.env.SUPERVISOR_TOKEN) {
+    config.zwaveJs.url = await discoverZwaveJsUrl({
+      supervisorToken: process.env.SUPERVISOR_TOKEN,
+    });
+    log.info({ url: config.zwaveJs.url }, "zwave-js discovered via supervisor");
+  }
 
   const maxSlots = Math.min(...config.locks.map((l) => l.maxCodeSlots));
   const store = new Store({ path: join(opts.dataDir, "users.json"), maxSlots });
