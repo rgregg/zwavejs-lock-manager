@@ -117,19 +117,22 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
     const nodeId = Number(evt.lockId.replace(/^node-/, ""));
     const lock = nodeIdToLock.get(nodeId);
     if (!lock) return;
-    const user = store.listUsers().find((u) => u.slot === evt.slot);
+    // A Door Lock fallback unlock carries no slot, so there's no user to attribute.
+    const user =
+      evt.slot !== undefined ? store.listUsers().find((u) => u.slot === evt.slot) : undefined;
     const logged = {
       ts: evt.ts,
       type: "unlock" as const,
       lockId: lock.id,
       lockName: lock.name,
-      slot: evt.slot,
+      ...(evt.slot !== undefined ? { slot: evt.slot } : {}),
+      ...(evt.source ? { source: evt.source } : {}),
       ...(user ? { userId: user.id, userName: user.name } : {}),
     };
     await eventLog.append(logged);
     const res = await notifier.notifyUnlock({
       lockName: lock.name,
-      ...(user ? { userName: user.name } : { slot: evt.slot }),
+      ...(user ? { userName: user.name } : evt.slot !== undefined ? { slot: evt.slot } : {}),
     });
     tracker.set("homeAssistant", res.ok ? "connected" : "disconnected");
     if (!res.ok) {
@@ -138,7 +141,7 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
         type: "notification_failed",
         reason: res.error,
         lockId: lock.id,
-        slot: evt.slot,
+        ...(evt.slot !== undefined ? { slot: evt.slot } : {}),
       });
     }
   });

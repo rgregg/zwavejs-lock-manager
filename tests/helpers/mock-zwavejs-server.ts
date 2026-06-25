@@ -19,6 +19,8 @@ export class MockZwaveJsServer {
   private sockets = new Map<WebSocket, ConnectionState>();
   readonly commands: RecordedCommand[] = [];
   private resultHandlers = new Map<string, ResultHandler>();
+  /** Count of websocket ping frames received from clients (heartbeat). */
+  pings = 0;
   port = 0;
   readonly strict: boolean;
 
@@ -28,6 +30,9 @@ export class MockZwaveJsServer {
     this.wss = new WebSocketServer({ server: this.server });
     this.wss.on("connection", (socket) => {
       this.sockets.set(socket, "waitingForSchema");
+      socket.on("ping", () => {
+        this.pings += 1;
+      });
       socket.send(
         JSON.stringify({
           type: "version",

@@ -82,7 +82,9 @@ function describeEvent(e: LoggedEvent): string {
     case "unlock":
       return e.userName
         ? `${e.userName} unlocked ${e.lockName}`
-        : `Unknown slot ${e.slot} unlocked ${e.lockName}`;
+        : e.slot !== undefined
+          ? `Unknown slot ${e.slot} unlocked ${e.lockName}`
+          : `${e.lockName} was unlocked`;
     case "write":
       return `Write slot ${e.slot} on ${e.lockId}: ${e.outcome}`;
     case "notification_failed":

@@ -41,6 +41,17 @@ describe("HaNotifier", () => {
     expect(body.message).toBe("Unknown user (slot 7) unlocked Back Door");
   });
 
+  it("notifies generically when neither user nor slot is known (e.g. fingerprint/thumbturn)", async () => {
+    const n = new HaNotifier({
+      url: "http://ha.local:8123",
+      token: "t",
+      service: "notify.mobile_app_ryan",
+    });
+    await n.notifyUnlock({ lockName: "Side Door" });
+    const body = JSON.parse(fetchMock.mock.calls[0]![1].body as string);
+    expect(body.message).toBe("Side Door was unlocked");
+  });
+
   it("returns an error result when HA is unreachable (no throw)", async () => {
     fetchMock.mockRejectedValueOnce(new Error("ECONNREFUSED"));
     const n = new HaNotifier({

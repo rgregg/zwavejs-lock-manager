@@ -5,7 +5,8 @@ export interface LoggedUnlock {
   lockName: string;
   userId?: string;
   userName?: string;
-  slot: number;
+  slot?: number;
+  source?: "keypad" | "doorLock";
 }
 
 export interface LoggedWrite {
@@ -21,7 +22,7 @@ export interface LoggedNotificationFailed {
   type: "notification_failed";
   reason: string;
   lockId: string;
-  slot: number;
+  slot?: number;
 }
 
 export type LoggedEvent =

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { MockZwaveJsServer } from "../helpers/mock-zwavejs-server.js";
 import { ZWaveJSClient } from "../../src/zwave/client.js";
 import { EventBus } from "../../src/events/bus.js";
+import { createLogger } from "../../src/util/logger.js";
 
 describe("ZWaveJSClient", () => {
   let server: MockZwaveJsServer;
@@ -17,6 +18,7 @@ describe("ZWaveJSClient", () => {
       bus,
       reconnectBaseMs: 10,
       reconnectMaxMs: 100,
+      doorLockDebounceMs: 20,
     });
   });
 
@@ -185,5 +187,84 @@ describe("ZWaveJSClient", () => {
     });
 
     await expect(client.getAllUserCodes(7, 30)).rejects.toThrow("connection closed");
+  });
+
+  const doorLockEvent = (nodeId: number, newValue: number) => ({
+    source: "node",
+    event: "value updated",
+    nodeId,
+    args: { commandClass: 98, property: "currentMode", prevValue: 255, newValue },
+  });
+
+  it("emits a generic unlock (no slot) on a Door Lock unsecured value-update when no keypad notification arrives", async () => {
+    const seen: Array<{ lockId: string; slot?: number; source?: string }> = [];
+    bus.on("unlock", (e) => seen.push({ lockId: e.lockId, slot: e.slot, source: e.source }));
+    await client.start();
+    server.pushEvent(doorLockEvent(13, 0));
+    await new Promise((r) => setTimeout(r, 60));
+    expect(seen).toEqual([{ lockId: "node-13", slot: undefined, source: "doorLock" }]);
+  });
+
+  it("does not emit an unlock when the Door Lock returns to secured (locked)", async () => {
+    const seen: unknown[] = [];
+    bus.on("unlock", (e) => seen.push(e));
+    await client.start();
+    server.pushEvent(doorLockEvent(13, 255));
+    await new Promise((r) => setTimeout(r, 60));
+    expect(seen).toEqual([]);
+  });
+
+  it("suppresses the Door Lock fallback when a keypad notification fired just before (dedup)", async () => {
+    const seen: Array<{ slot?: number; source?: string }> = [];
+    bus.on("unlock", (e) => seen.push({ slot: e.slot, source: e.source }));
+    await client.start();
+    server.pushEvent({ source: "node", event: "notification", nodeId: 13, args: { userId: 5 } });
+    await new Promise((r) => setTimeout(r, 5));
+    server.pushEvent(doorLockEvent(13, 0));
+    await new Promise((r) => setTimeout(r, 60));
+    expect(seen).toEqual([{ slot: 5, source: "keypad" }]);
+  });
+
+  it("cancels the pending Door Lock fallback when a keypad notification arrives during the debounce window", async () => {
+    const seen: Array<{ slot?: number; source?: string }> = [];
+    bus.on("unlock", (e) => seen.push({ slot: e.slot, source: e.source }));
+    await client.start();
+    server.pushEvent(doorLockEvent(13, 0));
+    await new Promise((r) => setTimeout(r, 5));
+    server.pushEvent({ source: "node", event: "notification", nodeId: 13, args: { userId: 5 } });
+    await new Promise((r) => setTimeout(r, 60));
+    expect(seen).toEqual([{ slot: 5, source: "keypad" }]);
+  });
+
+  it("sends periodic websocket heartbeat pings", async () => {
+    client = new ZWaveJSClient({
+      url: server.url(),
+      bus,
+      reconnectBaseMs: 10,
+      reconnectMaxMs: 100,
+      heartbeatIntervalMs: 15,
+    });
+    await client.start();
+    await new Promise((r) => setTimeout(r, 70));
+    expect(server.pings).toBeGreaterThanOrEqual(2);
+  });
+
+  it("logs when it connects to zwave-js-server", async () => {
+    const lines: string[] = [];
+    const log = createLogger({ stream: { write: (s: string) => void lines.push(s) } });
+    client = new ZWaveJSClient({ url: server.url(), bus, reconnectBaseMs: 10, reconnectMaxMs: 100, log });
+    await client.start();
+    expect(lines.some((l) => /connected to zwave-js-server/i.test(l))).toBe(true);
+  });
+
+  it("logs when the connection to zwave-js-server is lost", async () => {
+    const lines: string[] = [];
+    const log = createLogger({ stream: { write: (s: string) => void lines.push(s) } });
+    client = new ZWaveJSClient({ url: server.url(), bus, reconnectBaseMs: 10, reconnectMaxMs: 100, log });
+    await client.start();
+    lines.length = 0;
+    server.disconnectAll();
+    await new Promise((r) => setTimeout(r, 30));
+    expect(lines.some((l) => /connection (closed|lost)/i.test(l))).toBe(true);
   });
 });

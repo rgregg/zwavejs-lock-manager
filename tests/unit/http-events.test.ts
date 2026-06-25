@@ -35,4 +35,18 @@ describe("events routes", () => {
     expect(res.body).toContain("Alice");
     expect(res.body).toContain("Front Door");
   });
+
+  it("renders a slotless unlock (door-lock fallback) without an 'Unknown slot' label", async () => {
+    await eventLog.append({
+      ts: "2026-04-21T00:00:00Z",
+      type: "unlock",
+      lockId: "side-door",
+      lockName: "Side Door",
+      source: "doorLock",
+    });
+    const res = await app.inject({ method: "GET", url: "/events" });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toContain("Side Door was unlocked");
+    expect(res.body).not.toContain("Unknown slot undefined");
+  });
 });

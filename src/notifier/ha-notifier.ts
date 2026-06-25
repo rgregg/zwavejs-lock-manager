@@ -18,7 +18,9 @@ export class HaNotifier {
   async notifyUnlock(input: NotifyUnlockInput): Promise<NotifyResult> {
     const message = input.userName
       ? `${input.userName} unlocked ${input.lockName}`
-      : `Unknown user (slot ${input.slot ?? "?"}) unlocked ${input.lockName}`;
+      : input.slot !== undefined
+        ? `Unknown user (slot ${input.slot}) unlocked ${input.lockName}`
+        : `${input.lockName} was unlocked`;
 
     const [domain, service] = this.opts.service.split(".");
     const endpoint = `${this.opts.url.replace(/\/$/, "")}/api/services/${domain}/${service}`;

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { EventLog } from "../../log/event-log.js";
 import type { EventBus } from "../../events/bus.js";
+import type { UnlockEvent } from "../../events/types.js";
 import { renderEventsPage } from "../views/events.js";
 
 interface EventsDeps {
@@ -22,7 +23,7 @@ export function registerEventsRoutes(app: FastifyInstance, deps: EventsDeps): vo
       "cache-control": "no-cache",
       connection: "keep-alive",
     });
-    const onUnlock = (e: { ts: string; lockId: string; slot: number }) => {
+    const onUnlock = (e: UnlockEvent) => {
       reply.raw.write(`event: unlock\ndata: ${JSON.stringify(e)}\n\n`);
     };
     deps.bus.on("unlock", onUnlock);
