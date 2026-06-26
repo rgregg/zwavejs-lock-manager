@@ -52,6 +52,28 @@ describe("HaNotifier", () => {
     expect(body.message).toBe("Side Door was unlocked");
   });
 
+  it("includes the category in the body when configured (ticker.notify)", async () => {
+    const n = new HaNotifier({
+      url: "http://ha.local:8123",
+      token: "t",
+      service: "ticker.notify",
+      category: "Cabin",
+    });
+    await n.notifyUnlock({ lockName: "Side Door" });
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("http://ha.local:8123/api/services/ticker/notify");
+    const body = JSON.parse(init.body as string);
+    expect(body.category).toBe("Cabin");
+    expect(body.message).toBe("Side Door was unlocked");
+  });
+
+  it("omits category from the body when not configured", async () => {
+    const n = new HaNotifier({ url: "http://ha.local:8123", token: "t", service: "notify.mobile_app_ryan" });
+    await n.notifyUnlock({ lockName: "Side Door", userName: "Alice" });
+    const body = JSON.parse(fetchMock.mock.calls[0]![1].body as string);
+    expect(body).not.toHaveProperty("category");
+  });
+
   it("returns an error result when HA is unreachable (no throw)", async () => {
     fetchMock.mockRejectedValueOnce(new Error("ECONNREFUSED"));
     const n = new HaNotifier({

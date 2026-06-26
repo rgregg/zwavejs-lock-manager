@@ -16,6 +16,7 @@ export const LocksConfigSchema = z.object({
     token: z.string(),
     notify: z.object({
       service: z.string().min(1),
+      category: z.string().min(1).optional(),
     }),
   }),
   verify: z

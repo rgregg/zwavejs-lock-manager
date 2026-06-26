@@ -1,7 +1,8 @@
 export interface HaNotifierOptions {
   url: string;
   token: string;
-  service: string; // e.g. "notify.mobile_app_ryan"
+  service: string; // e.g. "notify.mobile_app_ryan" or "ticker.notify"
+  category?: string; // required by ticker.notify; included in the body when set
 }
 
 export interface NotifyUnlockInput {
@@ -32,7 +33,10 @@ export class HaNotifier {
           authorization: `Bearer ${this.opts.token}`,
           "content-type": "application/json",
         },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({
+          message,
+          ...(this.opts.category ? { category: this.opts.category } : {}),
+        }),
       });
       if (!res.ok) {
         const body = await res.text();

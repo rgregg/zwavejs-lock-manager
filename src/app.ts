@@ -73,6 +73,9 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
     url: config.homeAssistant.url,
     token: config.homeAssistant.token,
     service: config.homeAssistant.notify.service,
+    ...(config.homeAssistant.notify.category
+      ? { category: config.homeAssistant.notify.category }
+      : {}),
   });
   const eventLog = new EventLog({ path: join(opts.dataDir, "events.jsonl") });
 
