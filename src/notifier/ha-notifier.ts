@@ -35,7 +35,11 @@ export class HaNotifier {
         },
         body: JSON.stringify({
           message,
-          ...(this.opts.category ? { category: this.opts.category } : {}),
+          // ticker.notify requires both a category and a title (it rejects a
+          // category-only body with HTTP 400); use the lock name as the title.
+          ...(this.opts.category
+            ? { category: this.opts.category, title: input.lockName }
+            : {}),
         }),
       });
       if (!res.ok) {

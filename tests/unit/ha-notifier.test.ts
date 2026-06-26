@@ -65,6 +65,9 @@ describe("HaNotifier", () => {
     const body = JSON.parse(init.body as string);
     expect(body.category).toBe("Cabin");
     expect(body.message).toBe("Side Door was unlocked");
+    // ticker.notify requires a title (a category-only body is rejected with HTTP 400),
+    // so the lock name is sent as the title.
+    expect(body.title).toBe("Side Door");
   });
 
   it("omits category from the body when not configured", async () => {
