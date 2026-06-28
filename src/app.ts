@@ -55,7 +55,11 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
     throw new Error("LOCAL_SECRET env var is required");
   }
 
-  const config = await loadLocksConfig(join(opts.dataDir, "locks.yaml"));
+  // In HA add-on mode (SUPERVISOR_TOKEN present) config comes from the
+  // HA-managed options form at /data/options.json; otherwise from locks.yaml.
+  const inAddonMode = !!process.env.SUPERVISOR_TOKEN;
+  const configPath = join(opts.dataDir, inAddonMode ? "options.json" : "locks.yaml");
+  const config = await loadLocksConfig(configPath);
   for (const w of config.warnings) log.warn({ warning: w }, "config warning");
 
   const maxSlots = Math.min(...config.locks.map((l) => l.maxCodeSlots));

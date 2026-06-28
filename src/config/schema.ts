@@ -9,7 +9,9 @@ export const LockConfigSchema = z.object({
 
 export const LocksConfigSchema = z.object({
   zwaveJs: z.object({
-    url: z.string().url(),
+    // Empty string is the addon-mode sentinel: the URL is discovered at runtime
+    // from the Supervisor. Real values must still be valid URLs.
+    url: z.string().url().or(z.literal("")),
   }),
   homeAssistant: z.object({
     url: z.string().url(),
