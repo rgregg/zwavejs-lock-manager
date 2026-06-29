@@ -67,6 +67,37 @@ describe("ingress path rewriting", () => {
     expect(res.headers.location).toBe(`${INGRESS}/users`);
   });
 
+  it("sets Vary: X-Ingress-Path on rewritten responses", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/users",
+      headers: { "x-ingress-path": INGRESS },
+    });
+    expect(String(res.headers.vary ?? "")).toMatch(/X-Ingress-Path/i);
+  });
+
+  it("ignores a forged X-Ingress-Path that could inject markup", async () => {
+    const evil = '/"><script>alert(1)</script>';
+    const res = await app.inject({
+      method: "GET",
+      url: "/users",
+      headers: { "x-ingress-path": evil },
+    });
+    expect(res.body).not.toContain("<script>alert(1)</script>");
+    // Falls back to bare absolute paths, unmodified.
+    expect(res.body).toContain('href="/users"');
+  });
+
+  it("ignores a forged X-Ingress-Path that could cause an open redirect", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/",
+      headers: { "x-ingress-path": "//evil.example.com" },
+    });
+    expect(res.statusCode).toBe(302);
+    expect(res.headers.location).toBe("/users"); // not //evil.example.com/users
+  });
+
   it("uses bare paths when X-Ingress-Path is absent", async () => {
     await store.addUser({ name: "Alice", pin: "1234" });
     const res = await app.inject({ method: "GET", url: "/users" });

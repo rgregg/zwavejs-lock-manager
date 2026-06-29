@@ -14,6 +14,19 @@ function captureStream(): { stream: Writable; output: () => string } {
 }
 
 describe("logger", () => {
+  it("falls back to info when LOG_LEVEL is empty/whitespace", () => {
+    const prev = process.env.LOG_LEVEL;
+    process.env.LOG_LEVEL = "   ";
+    try {
+      // pino throws on a blank level; this must not.
+      const log = createLogger();
+      expect(log.level).toBe("info");
+    } finally {
+      if (prev === undefined) delete process.env.LOG_LEVEL;
+      else process.env.LOG_LEVEL = prev;
+    }
+  });
+
   it("redacts pin fields", () => {
     const { stream, output } = captureStream();
     const log = createLogger({ level: "info", stream });
