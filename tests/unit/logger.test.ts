@@ -1,6 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { Writable } from "node:stream";
 import { createLogger } from "../../src/util/logger.js";
+
+afterEach(() => vi.unstubAllEnvs());
 
 function captureStream(): { stream: Writable; output: () => string } {
   const chunks: Buffer[] = [];
@@ -15,16 +17,10 @@ function captureStream(): { stream: Writable; output: () => string } {
 
 describe("logger", () => {
   it("falls back to info when LOG_LEVEL is empty/whitespace", () => {
-    const prev = process.env.LOG_LEVEL;
-    process.env.LOG_LEVEL = "   ";
-    try {
-      // pino throws on a blank level; this must not.
-      const log = createLogger();
-      expect(log.level).toBe("info");
-    } finally {
-      if (prev === undefined) delete process.env.LOG_LEVEL;
-      else process.env.LOG_LEVEL = prev;
-    }
+    vi.stubEnv("LOG_LEVEL", "   ");
+    // pino throws on a blank level; this must not.
+    const log = createLogger();
+    expect(log.level).toBe("info");
   });
 
   it("redacts pin fields", () => {
