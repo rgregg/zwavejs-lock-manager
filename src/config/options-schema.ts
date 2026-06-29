@@ -8,6 +8,9 @@ import { z } from "zod";
  */
 export const AddonOptionsSchema = z.object({
   read_only: z.boolean().default(false),
+  // Optional explicit zwave-js-server URL. Leave blank to auto-discover the HA
+  // Z-Wave JS add-on; set it to point at an external/standalone server.
+  zwave_url: z.string().optional(),
   notify_service: z.string().min(1).default("notify.notify"),
   notify_category: z.string().min(1).optional(),
   verify_interval_days: z.number().int().positive().default(7),

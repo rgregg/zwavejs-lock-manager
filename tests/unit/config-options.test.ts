@@ -51,6 +51,38 @@ describe("loadLocksConfig (addon mode)", () => {
     });
   });
 
+  it("uses zwave_url directly when provided (skips the discovery sentinel)", async () => {
+    const dir = await withOptionsFile({
+      zwave_url: "ws://piworker01.lan:3000",
+      locks: [{ id: "front", name: "Front", node_id: 7 }],
+    });
+    const cfg = await loadLocksConfig(join(dir, "options.json"), {
+      env: { SUPERVISOR_TOKEN: "tok" },
+    });
+    expect(cfg.zwaveJs.url).toBe("ws://piworker01.lan:3000");
+  });
+
+  it("treats a blank zwave_url as unset (falls back to discovery sentinel)", async () => {
+    const dir = await withOptionsFile({
+      zwave_url: "   ",
+      locks: [{ id: "front", name: "Front", node_id: 7 }],
+    });
+    const cfg = await loadLocksConfig(join(dir, "options.json"), {
+      env: { SUPERVISOR_TOKEN: "tok" },
+    });
+    expect(cfg.zwaveJs.url).toBe("");
+  });
+
+  it("rejects a malformed zwave_url", async () => {
+    const dir = await withOptionsFile({
+      zwave_url: "not a url",
+      locks: [{ id: "front", name: "Front", node_id: 7 }],
+    });
+    await expect(
+      loadLocksConfig(join(dir, "options.json"), { env: { SUPERVISOR_TOKEN: "tok" } }),
+    ).rejects.toThrow();
+  });
+
   it("passes notify_category through when present", async () => {
     const dir = await withOptionsFile({
       notify_service: "notify.family",

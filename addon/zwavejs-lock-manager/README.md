@@ -16,6 +16,7 @@ notification whenever a lock is opened with a keypad code.
 | Option | Description |
 | --- | --- |
 | `read_only` | When `true` (default), no codes are written to your locks — safe for first launch. Flip to `false` to let the reconciler push codes. |
+| `zwave_url` | Optional. Leave blank to auto-discover the **Z-Wave JS add-on**. Set it (e.g. `ws://piworker01.lan:3000`) to use an external/standalone zwave-js-server instead. |
 | `notify_service` | Home Assistant notify service to call on unlock, e.g. `notify.family`. |
 | `notify_category` | Optional category passed in the notification body (for ticker.notify). |
 | `verify_interval_days` | How often each lock is read back to detect drift. |
@@ -41,7 +42,7 @@ locks:
 ## How it works
 
 - The Z-Wave JS connection is **auto-discovered** from the Z-Wave JS add-on — no
-  URL to configure.
+  URL to configure. (Running a standalone zwave-js-server? Set `zwave_url`.)
 - Notifications go through the Home Assistant Supervisor, so no long-lived token
   is needed.
 - The UI is served through **Ingress** (behind Home Assistant authentication);

@@ -89,8 +89,12 @@ function loadAddonConfig(
   }
   const o = result.data;
 
+  // An explicit zwave_url skips discovery; a blank value keeps the empty-string
+  // sentinel so app startup discovers the HA Z-Wave JS add-on instead.
+  const zwaveUrl = o.zwave_url?.trim() ? o.zwave_url.trim() : "";
+
   const config: LocksConfig = {
-    zwaveJs: { url: "" }, // discovered at runtime from the Supervisor
+    zwaveJs: { url: zwaveUrl }, // empty => discovered at runtime from the Supervisor
     homeAssistant: {
       url: "http://supervisor/core",
       token: env.SUPERVISOR_TOKEN ?? "",

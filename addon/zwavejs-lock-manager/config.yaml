@@ -24,6 +24,7 @@ services:
   - zwave_js:want
 options:
   read_only: true
+  zwave_url: ""
   notify_service: notify.notify
   verify_interval_days: 7
   verify_stagger_minutes: 60
@@ -31,6 +32,7 @@ options:
   locks: []
 schema:
   read_only: bool
+  zwave_url: str?
   notify_service: str
   notify_category: str?
   verify_interval_days: int(1,365)
