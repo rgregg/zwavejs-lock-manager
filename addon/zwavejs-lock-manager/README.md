@@ -6,7 +6,7 @@ notification whenever a lock is opened with a keypad code.
 ## Install
 
 1. **Settings → Add-ons → Add-on Store → ⋮ → Repositories**
-2. Add `https://github.com/rgregg/zwavejs-lock-users`
+2. Add `https://github.com/rgregg/zwavejs-lock-manager`
 3. Refresh the store and install **ZWaveJS Lock Manager**
 4. Open the **Configuration** tab and add your locks (see below)
 5. Start the add-on and open it from the sidebar
@@ -48,5 +48,5 @@ locks:
 - The UI is served through **Ingress** (behind Home Assistant authentication);
   open it from the sidebar.
 
-See the [project README](https://github.com/rgregg/zwavejs-lock-users) for the
+See the [project README](https://github.com/rgregg/zwavejs-lock-manager) for the
 design notes and standalone (docker-compose) deployment.
