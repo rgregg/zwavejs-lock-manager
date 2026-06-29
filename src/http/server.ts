@@ -27,9 +27,47 @@ export interface ServerDeps {
   onDriftClear?: (lockId: string) => void;
 }
 
+// Matches the start of an absolute internal link in HTML attributes we emit:
+// href, action, and the htmx request attributes. Protocol-relative URLs (//host)
+// are excluded so external assets are left alone.
+const INGRESS_LINK_RE = /\b(href|action|hx-get|hx-post|hx-put|hx-patch|hx-delete)="\/(?!\/)/g;
+
+/**
+ * Behind Home Assistant Ingress the app is served under a per-session prefix
+ * (e.g. /api/hassio_ingress/<token>) advertised via the `X-Ingress-Path` header.
+ * Absolute links we emit (/users, /status, form actions, hx-* targets) would
+ * otherwise escape that prefix. This hook rewrites them — and any redirect
+ * Location — to stay inside the ingress path. It is a no-op when the header is
+ * absent, so standalone/docker-compose deployments are unaffected.
+ */
+export function registerIngressRewrite(app: FastifyInstance): void {
+  app.addHook("onSend", (req, reply, payload, done) => {
+    const ingressPath = req.headers["x-ingress-path"];
+    if (typeof ingressPath !== "string" || ingressPath === "") {
+      done(null, payload);
+      return;
+    }
+    const location = reply.getHeader("location");
+    if (typeof location === "string" && location.startsWith("/") && !location.startsWith("//")) {
+      reply.header("location", ingressPath + location);
+    }
+    const contentType = reply.getHeader("content-type");
+    if (
+      typeof payload === "string" &&
+      typeof contentType === "string" &&
+      contentType.includes("text/html")
+    ) {
+      done(null, payload.replace(INGRESS_LINK_RE, `$1="${ingressPath}/`));
+      return;
+    }
+    done(null, payload);
+  });
+}
+
 export function buildServer(deps: ServerDeps): FastifyInstance {
   const app = Fastify({ logger: false });
   app.register(formbody);
+  registerIngressRewrite(app);
   registerHealthRoutes(app);
   if (deps.store) {
     registerUsersRoutes(app, {
@@ -70,6 +108,7 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
 
 export function buildErrorServer(message: string): FastifyInstance {
   const app = Fastify({ logger: false });
+  registerIngressRewrite(app);
   registerHealthRoutes(app);
   const html = renderConfigErrorPage(message);
   app.setNotFoundHandler((_req, reply) => {
