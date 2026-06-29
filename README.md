@@ -15,6 +15,17 @@ A small self-hosted service that keeps user PIN codes in sync across multiple Z-
 
 See `docs/superpowers/specs/2026-04-21-zwave-lock-sync-design.md` for the design.
 
+## Two ways to run it
+
+- **Home Assistant add-on** (recommended for HA users) — installs from a custom
+  repository, auto-discovers `zwave-js-server`, notifies through the Supervisor
+  (no long-lived token), and serves the UI behind HA Ingress. See
+  [`addon/zwavejs-lock-manager/README.md`](addon/zwavejs-lock-manager/README.md).
+- **Standalone** (`docker compose`) — the Quickstart below.
+
+Both run the same code; the add-on path is detected at runtime via
+`SUPERVISOR_TOKEN`.
+
 ## Quickstart
 
 > First deployment? Walk through `docs/deployment-guide.md` — it covers a read-only validation pass before enabling writes.
@@ -63,10 +74,6 @@ npm run dev      # live-reload via tsx
 ```
 
 `docs/smoke-test-checklist.md` covers manual pre-release verification.
-
-## Roadmap
-
-- Home Assistant add-on packaging — see `docs/superpowers/plans/2026-04-26-home-assistant-addon.md`.
 
 ## License
 
