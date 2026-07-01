@@ -10,7 +10,7 @@ arch:
   - amd64
   - aarch64
 init: false
-startup: services
+startup: application
 boot: auto
 panel_icon: mdi:lock-smart
 ingress: true
@@ -18,10 +18,6 @@ ingress_port: 8080
 homeassistant_api: true
 hassio_api: true
 auth_api: false
-discovery:
-  - zwave_js
-services:
-  - zwave_js:want
 options:
   read_only: true
   zwave_url: ""
