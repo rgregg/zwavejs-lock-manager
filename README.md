@@ -20,7 +20,7 @@ See `docs/superpowers/specs/2026-04-21-zwave-lock-sync-design.md` for the design
 - **Home Assistant add-on** (recommended for HA users) — installs from a custom
   repository, auto-discovers `zwave-js-server`, notifies through the Supervisor
   (no long-lived token), and serves the UI behind HA Ingress. See
-  [`addon/zwavejs-lock-manager/README.md`](addon/zwavejs-lock-manager/README.md).
+  [`zwavejs-lock-manager/README.md`](zwavejs-lock-manager/README.md).
 - **Standalone** (`docker compose`) — the Quickstart below.
 
 Both run the same code; the add-on path is detected at runtime via

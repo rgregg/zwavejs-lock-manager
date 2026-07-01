@@ -6,7 +6,8 @@ on:
     tags: ["addon-*"]
     paths:
       - "src/**"
-      - "addon/**"
+      - "zwavejs-lock-manager/**"
+      - "repository.yaml"
       - "package.json"
       - "package-lock.json"
       - "tsconfig.json"
@@ -47,7 +48,7 @@ jobs:
       - name: Resolve add-on version
         id: meta
         run: |
-          VERSION=$(awk -F'"' '/^version:/ {print $2}' addon/zwavejs-lock-manager/config.yaml)
+          VERSION=$(awk -F'"' '/^version:/ {print $2}' zwavejs-lock-manager/config.yaml)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Add-on version: $VERSION"
 
@@ -55,7 +56,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: addon/zwavejs-lock-manager/Dockerfile
+          file: zwavejs-lock-manager/Dockerfile
           platforms: ${{ matrix.platform }}
           push: true
           build-args: |
