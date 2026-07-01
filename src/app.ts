@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import type { FastifyInstance } from "fastify";
 import { loadLocksConfig } from "./config/loader.js";
+import { discoverZwaveJsUrl } from "./config/discovery.js";
 import type { LocksConfig } from "./config/schema.js";
 import { Store } from "./store/store.js";
 import { LockStateCache } from "./cache/cache.js";
@@ -55,8 +56,22 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
     throw new Error("LOCAL_SECRET env var is required");
   }
 
-  const config = await loadLocksConfig(join(opts.dataDir, "locks.yaml"));
+  // In HA add-on mode (SUPERVISOR_TOKEN present) config comes from the
+  // HA-managed options form at /data/options.json; otherwise from locks.yaml.
+  const inAddonMode = !!process.env.SUPERVISOR_TOKEN;
+  const configPath = join(opts.dataDir, inAddonMode ? "options.json" : "locks.yaml");
+  const config = await loadLocksConfig(configPath);
   for (const w of config.warnings) log.warn({ warning: w }, "config warning");
+
+  // In addon mode the Z-Wave URL is empty until resolved from the Supervisor's
+  // discovery API. Failure here throws and drops us into error mode with a clear
+  // message (the Z-Wave JS add-on probably isn't installed/running yet).
+  if (inAddonMode && !config.zwaveJs.url) {
+    config.zwaveJs.url = await discoverZwaveJsUrl({
+      supervisorToken: process.env.SUPERVISOR_TOKEN ?? "",
+    });
+    log.info({ url: config.zwaveJs.url }, "discovered zwave-js-server via supervisor");
+  }
 
   const maxSlots = Math.min(...config.locks.map((l) => l.maxCodeSlots));
   const store = new Store({ path: join(opts.dataDir, "users.json"), maxSlots });
