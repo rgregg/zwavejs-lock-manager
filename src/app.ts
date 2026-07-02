@@ -63,14 +63,13 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
   const config = await loadLocksConfig(configPath);
   for (const w of config.warnings) log.warn({ warning: w }, "config warning");
 
-  // In addon mode the Z-Wave URL is empty until resolved from the Supervisor's
-  // discovery API. Failure here throws and drops us into error mode with a clear
-  // message (the Z-Wave JS add-on probably isn't installed/running yet).
+  // In addon mode the Z-Wave URL is empty until auto-detected by probing the
+  // well-known Z-Wave JS add-on hostnames (add-ons can't use the Supervisor
+  // discovery API). Failure here throws and drops us into error mode with a
+  // clear message telling the user to set `zwave_url`.
   if (inAddonMode && !config.zwaveJs.url) {
-    config.zwaveJs.url = await discoverZwaveJsUrl({
-      supervisorToken: process.env.SUPERVISOR_TOKEN ?? "",
-    });
-    log.info({ url: config.zwaveJs.url }, "discovered zwave-js-server via supervisor");
+    config.zwaveJs.url = await discoverZwaveJsUrl();
+    log.info({ url: config.zwaveJs.url }, "auto-detected zwave-js-server");
   }
 
   const maxSlots = Math.min(...config.locks.map((l) => l.maxCodeSlots));

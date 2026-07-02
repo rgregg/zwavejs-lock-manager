@@ -1,56 +1,40 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { discoverZwaveJsUrl } from "../../src/config/discovery.js";
+import { describe, expect, it, vi } from "vitest";
+import { discoverZwaveJsUrl, DEFAULT_ZWAVE_CANDIDATES } from "../../src/config/discovery.js";
 
 describe("discoverZwaveJsUrl", () => {
-  const fetchMock = vi.fn();
-  beforeEach(() => {
-    fetchMock.mockReset();
-    vi.stubGlobal("fetch", fetchMock);
-  });
-  afterEach(() => vi.unstubAllGlobals());
-
-  it("returns the WS URL from the supervisor's zwave_js discovery", async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        data: {
-          discovery: [
-            { service: "zwave_js", uuid: "x", config: { host: "core-zwave-js", port: 3000 } },
-          ],
-        },
-      }),
+  it("returns the first candidate the prober can reach", async () => {
+    const probe = vi.fn(async () => true);
+    const url = await discoverZwaveJsUrl({
+      candidates: ["ws://core-zwave-js:3000", "ws://a0d7b954-zwavejs2mqtt:3000"],
+      probe,
     });
-    const url = await discoverZwaveJsUrl({ supervisorToken: "tok" });
     expect(url).toBe("ws://core-zwave-js:3000");
-    expect(fetchMock).toHaveBeenCalledWith(
-      "http://supervisor/discovery",
-      expect.objectContaining({
-        headers: expect.objectContaining({ authorization: "Bearer tok" }),
-      }),
-    );
+    expect(probe).toHaveBeenCalledTimes(1);
+    expect(probe).toHaveBeenCalledWith("ws://core-zwave-js:3000");
   });
 
-  it("defaults the port to 3000 when discovery omits it", async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        data: { discovery: [{ service: "zwave_js", config: { host: "core-zwave-js" } }] },
-      }),
+  it("skips unreachable candidates and returns the first reachable one", async () => {
+    const probe = vi.fn(async (url: string) => url === "ws://a0d7b954-zwavejs2mqtt:3000");
+    const url = await discoverZwaveJsUrl({
+      candidates: ["ws://core-zwave-js:3000", "ws://a0d7b954-zwavejs2mqtt:3000"],
+      probe,
     });
-    const url = await discoverZwaveJsUrl({ supervisorToken: "t" });
-    expect(url).toBe("ws://core-zwave-js:3000");
+    expect(url).toBe("ws://a0d7b954-zwavejs2mqtt:3000");
+    expect(probe).toHaveBeenCalledTimes(2);
   });
 
-  it("throws when no zwave_js discovery is registered", async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ data: { discovery: [] } }),
-    });
-    await expect(discoverZwaveJsUrl({ supervisorToken: "t" })).rejects.toThrow(/not discovered/i);
+  it("throws a clear, actionable error when no candidate is reachable", async () => {
+    const probe = vi.fn(async () => false);
+    await expect(
+      discoverZwaveJsUrl({ candidates: ["ws://core-zwave-js:3000"], probe }),
+    ).rejects.toThrow(/zwave_url/i);
   });
 
-  it("throws when the supervisor request fails", async () => {
-    fetchMock.mockResolvedValueOnce({ ok: false, status: 502, json: async () => ({}) });
-    await expect(discoverZwaveJsUrl({ supervisorToken: "t" })).rejects.toThrow(/502/);
+  it("probes the known Z-Wave JS add-on hostnames by default", async () => {
+    const probe = vi.fn(async () => false);
+    await expect(discoverZwaveJsUrl({ probe })).rejects.toThrow();
+    expect(probe.mock.calls.map((c) => c[0])).toEqual(DEFAULT_ZWAVE_CANDIDATES);
+    expect(DEFAULT_ZWAVE_CANDIDATES).toContain("ws://core-zwave-js:3000");
+    expect(DEFAULT_ZWAVE_CANDIDATES).toContain("ws://a0d7b954-zwavejs2mqtt:3000");
   });
 });

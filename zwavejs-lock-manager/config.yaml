@@ -1,5 +1,5 @@
 name: ZWaveJS Lock Manager
-version: "0.1.0"
+version: "0.1.1"
 slug: zwavejs_lock_manager
 description: Synchronize PIN codes across Z-Wave door locks and notify via Home Assistant.
 url: https://github.com/rgregg/zwavejs-lock-manager
@@ -20,6 +20,10 @@ hassio_api: true
 auth_api: false
 options:
   read_only: true
+  # Leave blank to auto-detect the Z-Wave JS add-on (probes core-zwave-js and
+  # a0d7b954-zwavejs2mqtt on port 3000). Set it for an external/standalone
+  # server, a non-default port, or an unusual add-on slug, e.g.
+  # ws://piworker01.lan:3000
   zwave_url: ""
   notify_service: notify.notify
   verify_interval_days: 7
