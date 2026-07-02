@@ -21,6 +21,8 @@ export interface ServerDeps {
   bus?: EventBus;
   status?: ConnectionStatusTracker;
   readOnly?: boolean;
+  /** Local secret for fingerprint-matching user PINs in the drift view. */
+  secret?: string;
   onUsersChanged?: () => void;
   onResync?: (lockId: string) => void;
   onVerify?: (lockId: string) => void;
@@ -108,6 +110,7 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
       cache: deps.cache,
       ...(deps.store ? { store: deps.store } : {}),
       ...(deps.readOnly !== undefined ? { readOnly: deps.readOnly } : {}),
+      ...(deps.secret !== undefined ? { secret: deps.secret } : {}),
       onResync: deps.onResync ?? (() => undefined),
       onVerify: deps.onVerify ?? (() => undefined),
       onDriftClear: deps.onDriftClear ?? (() => undefined),

@@ -264,6 +264,7 @@ async function buildFullApp(opts: BuildAppOptions, log: Logger): Promise<Running
     bus,
     status: tracker,
     readOnly: config.readOnly,
+    secret: opts.localSecret,
     onUsersChanged: () => reconciler.scheduleReconcile(desired),
     onResync: (lockId) => {
       void reconciler.reconcileLockOnly(lockId, desired());

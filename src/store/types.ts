@@ -24,4 +24,5 @@ export interface UserPatch {
   name?: string;
   pin?: string;
   enabled?: boolean;
+  slot?: number;
 }
