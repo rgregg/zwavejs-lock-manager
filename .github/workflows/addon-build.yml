@@ -59,6 +59,11 @@ jobs:
           file: zwavejs-lock-manager/Dockerfile
           platforms: ${{ matrix.platform }}
           push: true
+          # Per-arch single-image manifests (HA substitutes {arch} and pulls one
+          # image per host arch). Disable attestations so we don't push an OCI
+          # index with an "unknown/unknown" provenance entry.
+          provenance: false
+          sbom: false
           build-args: |
             BUILD_FROM=ghcr.io/home-assistant/${{ matrix.arch }}-base:3.21
           tags: |
