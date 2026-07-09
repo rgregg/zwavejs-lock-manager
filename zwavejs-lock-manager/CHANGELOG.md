@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.0
+
+First stable Home Assistant add-on release, consolidating the 0.1.x series.
+
+- Runs as a Home Assistant add-on: install from a custom repository, Ingress UI
+  behind Home Assistant auth, notifications through the Supervisor (no long-lived
+  token required).
+- Auto-detects the Z-Wave JS add-on by probing the standard hostnames
+  (`core-zwave-js`, `a0d7b954-zwavejs2mqtt`); set `zwave_url` to override for an
+  external/standalone server or non-default port.
+- User-centric drift view: shows whether each user's PIN is in place, in a
+  different slot, or absent, and resolves conflicts safely (Replace / Adopt to a
+  free slot / Move) — no more errors when a slot is already in use. All drift
+  actions are read-only safe.
+- Read-only mode on by default for a safe first launch.
+
 ## 0.1.2
 
 - Drift page reorganized around your users: each shows whether its PIN is in
