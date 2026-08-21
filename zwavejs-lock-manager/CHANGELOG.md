@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.1
+
+- Events page now updates live for **every** event type. The SSE stream
+  previously relayed only keypad unlocks, so writes (e.g. enabling a user's PIN)
+  and notification failures appeared only after a manual page reload.
+- The stream flushes its response head immediately and sends a periodic
+  heartbeat. Previously it wrote nothing until an unlock arrived, so the client
+  saw an empty socket and reverse proxies (including Ingress) could reap the
+  connection as dead.
+- Streamed rows are rendered server-side, so a live event reads exactly like the
+  same event after a reload.
+
 ## 0.2.0
 
 First stable Home Assistant add-on release, consolidating the 0.1.x series.

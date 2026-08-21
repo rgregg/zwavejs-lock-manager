@@ -20,6 +20,8 @@ export interface ServerDeps {
   eventLog?: EventLog;
   bus?: EventBus;
   status?: ConnectionStatusTracker;
+  /** SSE heartbeat interval, ms. Overridable for tests. */
+  heartbeatMs?: number;
   readOnly?: boolean;
   /** Local secret for fingerprint-matching user PINs in the drift view. */
   secret?: string;
@@ -117,11 +119,11 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
       ...(deps.onUsersChanged ? { onChange: deps.onUsersChanged } : {}),
     });
   }
-  if (deps.eventLog && deps.bus) {
+  if (deps.eventLog) {
     registerEventsRoutes(app, {
       eventLog: deps.eventLog,
-      bus: deps.bus,
       ...(deps.readOnly !== undefined ? { readOnly: deps.readOnly } : {}),
+      ...(deps.heartbeatMs !== undefined ? { heartbeatMs: deps.heartbeatMs } : {}),
     });
   }
   if (deps.status) {

@@ -15,6 +15,8 @@ export class EventLog {
   private readonly retentionMs: number;
   private ensured = false;
   private lastPruneAt = 0;
+  /** Live subscribers (the SSE stream); notified after each successful append. */
+  private readonly subscribers = new Set<(event: LoggedEvent) => void>();
 
   constructor(opts: EventLogOptions) {
     this.path = opts.path;
@@ -23,10 +25,25 @@ export class EventLog {
     this.retentionMs = retentionDays * 24 * 60 * 60 * 1000;
   }
 
+  /** Subscribe to appended events. Returns an unsubscribe function. */
+  onAppend(handler: (event: LoggedEvent) => void): () => void {
+    this.subscribers.add(handler);
+    return () => this.subscribers.delete(handler);
+  }
+
   async append(event: LoggedEvent): Promise<void> {
     await this.ensureDir();
     await this.rotateIfNeeded();
     await appendFile(this.path, `${JSON.stringify(event)}\n`, "utf8");
+    // A broken subscriber (e.g. a half-closed SSE socket) must never fail the
+    // append that already made it to disk.
+    for (const handler of this.subscribers) {
+      try {
+        handler(event);
+      } catch {
+        /* ignore */
+      }
+    }
     if (Date.now() - this.lastPruneAt > 24 * 60 * 60 * 1000) {
       this.lastPruneAt = Date.now();
       void this.pruneExpired().catch(() => undefined);

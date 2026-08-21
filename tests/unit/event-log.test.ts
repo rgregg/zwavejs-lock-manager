@@ -63,4 +63,35 @@ describe("EventLog", () => {
     await log.append({ ts: newTs, type: "unlock", lockId: "a", lockName: "A", slot: 2 } as LoggedEvent);
     expect(await log.pruneExpired()).toBe(1);
   });
+
+  it("notifies onAppend subscribers with each appended event", async () => {
+    const { log } = await makeLog();
+    const seen: LoggedEvent[] = [];
+    log.onAppend((e) => seen.push(e));
+    await log.append({ ts: "t1", type: "write", lockId: "a", slot: 7, outcome: "ok" });
+    await log.append({ ts: "t2", type: "unlock", lockId: "a", lockName: "A", slot: 1 });
+    expect(seen.map((e) => e.type)).toEqual(["write", "unlock"]);
+    expect(seen[0]).toMatchObject({ slot: 7, outcome: "ok" });
+  });
+
+  it("onAppend returns an unsubscribe that stops delivery", async () => {
+    const { log } = await makeLog();
+    const seen: LoggedEvent[] = [];
+    const off = log.onAppend((e) => seen.push(e));
+    await log.append({ ts: "t1", type: "write", lockId: "a", slot: 7, outcome: "ok" });
+    off();
+    await log.append({ ts: "t2", type: "write", lockId: "a", slot: 8, outcome: "ok" });
+    expect(seen).toHaveLength(1);
+  });
+
+  it("a throwing subscriber does not break append", async () => {
+    const { log } = await makeLog();
+    log.onAppend(() => {
+      throw new Error("boom");
+    });
+    await expect(
+      log.append({ ts: "t1", type: "write", lockId: "a", slot: 7, outcome: "ok" }),
+    ).resolves.toBeUndefined();
+    expect(await log.tail(1)).toHaveLength(1);
+  });
 });
