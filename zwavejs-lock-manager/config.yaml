@@ -1,5 +1,5 @@
 name: ZWaveJS Lock Manager
-version: "0.2.1"
+version: "0.2.2"
 slug: zwavejs_lock_manager
 description: Synchronize PIN codes across Z-Wave door locks and notify via Home Assistant.
 url: https://github.com/rgregg/zwavejs-lock-manager

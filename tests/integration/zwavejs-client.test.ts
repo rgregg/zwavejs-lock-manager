@@ -39,6 +39,23 @@ describe("ZWaveJSClient", () => {
     expect(server.commands.map((c) => c.command)).toEqual(["set_api_schema", "start_listening"]);
   });
 
+  it("start() resolves and keeps retrying when the server is unreachable at boot", async () => {
+    const infos: string[] = [];
+    const log = { info: (_o: unknown, m: string) => infos.push(m), warn: () => {}, error: () => {} } as never;
+    // Port 1 on loopback refuses connections immediately (same failure class as EHOSTUNREACH).
+    const down = new ZWaveJSClient({
+      url: "ws://127.0.0.1:1",
+      bus,
+      reconnectBaseMs: 10,
+      reconnectMaxMs: 20,
+      log,
+    });
+    await expect(down.start()).resolves.toBeUndefined();
+    await new Promise((r) => setTimeout(r, 100));
+    expect(infos.filter((m) => m === "scheduling zwave-js reconnect").length).toBeGreaterThan(1);
+    await down.stop();
+  });
+
   it("emits disconnected then connected on reconnect", async () => {
     const events: string[] = [];
     bus.on("connection", (e) => events.push(e.status));

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.2
+
+- Fixed a crash loop when the Z-Wave JS server is unreachable at startup (for
+  example it is down, rebooting, or `zwave_url` points at a stale address). The
+  add-on previously exited on the first failed connection, so the UI never came
+  up. It now logs a warning, keeps the UI available, and retries with backoff.
+- A later socket error after a successful handshake can no longer crash the
+  process.
+
 ## 0.2.1
 
 - Events page now updates live for **every** event type. The SSE stream

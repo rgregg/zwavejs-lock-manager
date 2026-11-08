@@ -59,7 +59,18 @@ export class ZWaveJSClient {
 
   async start(): Promise<void> {
     this.stopped = false;
-    await this.connect();
+    try {
+      await this.connect();
+    } catch (err) {
+      // Z-Wave JS may be down or still starting (e.g. the add-on boots after us).
+      // Don't take the whole app down: the failed socket's "close" event drives
+      // onClose(), which already schedules the backoff reconnect. The HTTP UI
+      // stays up and the connection indicator shows disconnected meanwhile.
+      this.opts.log?.warn(
+        { url: this.opts.url, err: (err as Error).message },
+        "zwave-js-server unreachable at startup; will keep retrying",
+      );
+    }
   }
 
   async stop(): Promise<void> {
@@ -89,7 +100,9 @@ export class ZWaveJSClient {
         }
       };
 
-      ws.once("error", (err) => {
+      // Persistent (not once): an "error" with no listener is thrown by Node's
+      // EventEmitter and would crash the process on a later socket error.
+      ws.on("error", (err) => {
         if (!handshakeDone) fail(err as Error);
       });
 
